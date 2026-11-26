@@ -1,0 +1,2277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Algebra 1 Web-Slinger: Visual Interactive Lab</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    /* -- Standalone browser colour tokens (dark theme) -- */
+    :root {
+      --background: #0f1117;
+      --card: #1a1f2e;
+      --foreground: #e8eaf0;
+      --muted-foreground: #8892a4;
+      --border: #2d3348;
+      --card-border: #2d3348;
+      --primary: #4f8ef7;
+      --primary-foreground: #ffffff;
+      --secondary: #252d3d;
+      --secondary-foreground: #c0c8d8;
+      --success: #22c55e;
+      --warning: #f59e0b;
+      --error: #ef4444;
+      --accent: #a855f7;
+      --link: #60a5fa;
+    }
+    body { background-color: var(--background); color: var(--foreground); }
+    @keyframes floatIn {
+      from { opacity: 0; transform: translateY(8px) scale(0.96); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    @keyframes popShake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-6px); }
+      75% { transform: translateX(6px); }
+    }
+    @keyframes pulseGlow {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.35); }
+      50% { box-shadow: 0 0 0 8px rgba(59, 130, 246, 0); }
+    }
+    .anim-in { animation: floatIn 0.25s ease-out both; }
+    .anim-shake { animation: popShake 0.32s ease-in-out; }
+    .anim-glow { animation: pulseGlow 1.8s infinite; }
+    .beam-group {
+      transform-origin: 260px 136px;
+      transition: transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .pan-group {
+      transition: transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .tile-pill {
+      transition: transform 0.15s ease, opacity 0.2s ease;
+    }
+    .tile-pill:hover {
+      transform: translateY(-2px);
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .anim-in, .anim-shake, .anim-glow { animation: none !important; }
+      .beam-group, .pan-group, .tile-pill { transition: none !important; }
+    }
+  </style>
+</head>
+<body class="bg-[var(--background)] text-[var(--foreground)] antialiased m-0 p-0">
+  <div class="max-w-4xl mx-auto px-4 py-4 space-y-4">
+    <!-- Top HUD: Focused, high-dopamine, low-clutter -->
+    <header class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-3.5 flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-[var(--primary)] text-[var(--primary-foreground)] flex items-center justify-center text-xl font-bold select-none" aria-hidden="true">
+          🕸️
+        </div>
+        <div>
+          <div class="flex items-center gap-2 flex-wrap">
+            <h1 class="text-base font-bold tracking-tight m-0">Web-Slinger Algebra Lab</h1>
+            <span id="chapter-badge" class="text-xs px-2 py-0.5 rounded-full bg-[var(--secondary)] text-[var(--secondary-foreground)] font-medium">Ch. 2 · Systems & Inequalities</span>
+          </div>
+          <p class="text-xs text-[var(--muted-foreground)] m-0">Visual · Critical Thinking · Second-Order Reasoning</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2 flex-wrap">
+        <div class="px-3 py-1.5 rounded-xl bg-[var(--background)] border border-[var(--border)] text-xs font-semibold flex items-center gap-1.5 tabular-nums">
+          <span>⚡</span>
+          <span id="hud-xp">0 XP</span>
+        </div>
+        <div class="px-3 py-1.5 rounded-xl bg-[var(--background)] border border-[var(--border)] text-xs font-semibold flex items-center gap-1.5 tabular-nums">
+          <span>🔥</span>
+          <span id="hud-streak">0 Streak</span>
+        </div>
+        <button id="sound-toggle" type="button" class="px-3 py-1.5 rounded-xl bg-[var(--secondary)] text-[var(--secondary-foreground)] border border-[var(--border)] text-xs font-semibold cursor-pointer hover:opacity-90">
+          🔊 Sound: ON
+        </button>
+      </div>
+    </header>
+
+    <!-- Chapter Switcher -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2" role="tablist" aria-label="Chapters">
+      <button data-ch="1" class="ch-tab text-left rounded-xl px-3.5 py-2.5 border transition cursor-pointer bg-[var(--card)] border-[var(--border)] flex items-center justify-between gap-2">
+        <div>
+          <div class="text-xs font-bold text-[var(--muted-foreground)] uppercase">Chapter 1</div>
+          <div class="text-sm font-bold">⚖️ Solving Linear Equations</div>
+        </div>
+        <span id="badge-ch1" class="text-xs font-mono px-2 py-0.5 rounded-full bg-[var(--background)] border border-[var(--border)]">0/12</span>
+      </button>
+      <button data-ch="2" class="ch-tab text-left rounded-xl px-3.5 py-2.5 border transition cursor-pointer bg-[var(--card)] border-[var(--border)] flex items-center justify-between gap-2">
+        <div>
+          <div class="text-xs font-bold text-[var(--primary)] uppercase">Chapter 2 · New</div>
+          <div class="text-sm font-bold">🕸️ Systems & Inequalities by Graphing</div>
+        </div>
+        <span id="badge-ch2" class="text-xs font-mono px-2 py-0.5 rounded-full bg-[var(--background)] border border-[var(--border)]">0/12</span>
+      </button>
+    </div>
+
+    <!-- Visual Color Legend (Always visible, 1-line cognitive anchor) -->
+    <div class="flex flex-wrap items-center justify-between gap-2 px-1 text-xs">
+      <div id="legend-items" class="flex flex-wrap items-center gap-3"></div>
+      <div id="overall-progress" class="text-xs text-[var(--muted-foreground)] font-medium tabular-nums">
+        0 / 12 Missions Cleared
+      </div>
+    </div>
+
+    <!-- 3-Act Mode Switcher -->
+    <nav class="grid grid-cols-1 sm:grid-cols-3 gap-2" aria-label="Game modes">
+      <button data-act="1" class="act-tab text-left rounded-2xl p-3 border transition cursor-pointer bg-[var(--card)] border-[var(--border)]">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold uppercase tracking-wider text-[var(--primary)]">Act 1 · Core</span>
+          <span id="badge-act1" class="text-xs font-mono text-[var(--muted-foreground)]">0/4</span>
+        </div>
+        <div id="act1-title" class="text-sm font-bold mt-0.5">⚖️ Web-Balance Lab</div>
+        <div id="act1-sub" class="text-xs text-[var(--muted-foreground)]">Move blocks & keep scale level</div>
+      </button>
+
+      <button data-act="2" class="act-tab text-left rounded-2xl p-3 border transition cursor-pointer bg-[var(--card)] border-[var(--border)]">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold uppercase tracking-wider text-[var(--warning)]">Act 2 · Critical</span>
+          <span id="badge-act2" class="text-xs font-mono text-[var(--muted-foreground)]">0/4</span>
+        </div>
+        <div id="act2-title" class="text-sm font-bold mt-0.5">🕷️ Bug Hunter</div>
+        <div id="act2-sub" class="text-xs text-[var(--muted-foreground)]">Spot the broken step & explain why</div>
+      </button>
+
+      <button data-act="3" class="act-tab text-left rounded-2xl p-3 border transition cursor-pointer bg-[var(--card)] border-[var(--border)]">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold uppercase tracking-wider text-[var(--success)]">Act 3 · 2nd-Order</span>
+          <span id="badge-act3" class="text-xs font-mono text-[var(--muted-foreground)]">0/4</span>
+        </div>
+        <div id="act3-title" class="text-sm font-bold mt-0.5">🔮 What-If Ripple Lab</div>
+        <div id="act3-sub" class="text-xs text-[var(--muted-foreground)]">Predict parameter shifts & edge cases</div>
+      </button>
+    </nav>
+
+    <!-- Main Interactive Stage -->
+    <main id="stage" class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-4 space-y-4"></main>
+  </div>
+
+  <script>
+    (function () {
+      // ---------- Sound Engine (Gentle Web Audio feedback, no external files) ----------
+      let soundOn = true;
+      let audioCtx = null;
+      function beep(freq, dur = 0.08, type = 'sine', vol = 0.08) {
+        if (!soundOn) return;
+        try {
+          if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = type;
+          osc.frequency.value = freq;
+          gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start();
+          osc.stop(audioCtx.currentTime + dur);
+        } catch (e) { /* ignore audio blocks */ }
+      }
+      function sfxGood() { beep(523, 0.07); setTimeout(() => beep(659, 0.1), 70); }
+      function sfxWin() { beep(523, 0.08); setTimeout(() => beep(659, 0.08), 80); setTimeout(() => beep(784, 0.14), 160); }
+      function sfxWarn() { beep(210, 0.14, 'triangle', 0.1); }
+
+      // ---------- Global Game State ----------
+      const state = {
+        ch: 2,
+        act: 1,
+        xp: 0,
+        streak: 0,
+        cleared: {
+          1: [false, false, false, false],
+          2: [false, false, false, false],
+          3: [false, false, false, false],
+        },
+        idx: { 1: 0, 2: 0, 3: 0 },
+        cleared2: {
+          1: [false, false, false, false],
+          2: [false, false, false, false],
+          3: [false, false, false, false],
+        },
+        idx2: { 1: 0, 2: 0, 3: 0 },
+      };
+
+      const stage = document.getElementById('stage');
+      const hudXp = document.getElementById('hud-xp');
+      const hudStreak = document.getElementById('hud-streak');
+      const soundBtn = document.getElementById('sound-toggle');
+
+      soundBtn.addEventListener('click', () => {
+        soundOn = !soundOn;
+        soundBtn.textContent = soundOn ? '🔊 Sound: ON' : '🔇 Sound: OFF';
+        if (soundOn) beep(440, 0.06);
+      });
+
+      function addXP(pts) {
+        state.xp += pts;
+        state.streak += 1;
+        updateHud();
+      }
+      function breakStreak() {
+        state.streak = 0;
+        updateHud();
+      }
+      function markCleared(act, idx) {
+        if (!state.cleared[act][idx]) {
+          state.cleared[act][idx] = true;
+        }
+        updateHud();
+      }
+      function markCleared2(act, idx) {
+        if (!state.cleared2[act][idx]) {
+          state.cleared2[act][idx] = true;
+        }
+        updateHud();
+      }
+      function updateHud() {
+        hudXp.textContent = `${state.xp} XP`;
+        hudStreak.textContent = `${state.streak} Streak`;
+
+        const ch1Done = [1, 2, 3].reduce((acc, a) => acc + state.cleared[a].filter(Boolean).length, 0);
+        const ch2Done = [1, 2, 3].reduce((acc, a) => acc + state.cleared2[a].filter(Boolean).length, 0);
+        document.getElementById('badge-ch1').textContent = `${ch1Done}/12`;
+        document.getElementById('badge-ch2').textContent = `${ch2Done}/12`;
+
+        const activeCleared = state.ch === 1 ? state.cleared : state.cleared2;
+        let total = 0;
+        [1, 2, 3].forEach((a) => {
+          const done = activeCleared[a].filter(Boolean).length;
+          total += done;
+          document.getElementById(`badge-act${a}`).textContent = `${done}/4`;
+        });
+        document.getElementById('overall-progress').textContent = `${total} / 12 Missions Cleared`;
+
+        document.getElementById('chapter-badge').textContent =
+          state.ch === 1 ? 'Ch. 1 · Linear Equations' : 'Ch. 2 · Systems & Inequalities';
+
+        const legendEl = document.getElementById('legend-items');
+        if (state.ch === 1) {
+          legendEl.innerHTML = `
+            <span class="inline-flex items-center gap-1.5 font-semibold"><span class="w-3 h-3 rounded-sm inline-block" style="background: #f97316;"></span><span>Target <code class="font-mono">x</code></span></span>
+            <span class="inline-flex items-center gap-1.5 font-semibold"><span class="w-3 h-3 rounded-sm inline-block" style="background: #3b82f6;"></span><span>Positive Units (+1)</span></span>
+            <span class="inline-flex items-center gap-1.5 font-semibold"><span class="w-3 h-3 rounded-sm inline-block" style="background: #a855f7;"></span><span>Negative Units (−1)</span></span>
+            <span class="inline-flex items-center gap-1.5 font-semibold"><span class="w-3 h-3 rounded-sm inline-block" style="background: #22c55e;"></span><span>Balanced / Solved</span></span>
+          `;
+          document.getElementById('act1-title').textContent = '⚖️ Web-Balance Lab';
+          document.getElementById('act1-sub').textContent = 'Move blocks & keep scale level';
+          document.getElementById('act2-title').textContent = '🕷️ Bug Hunter';
+          document.getElementById('act2-sub').textContent = 'Spot the broken step & explain why';
+          document.getElementById('act3-title').textContent = '🔮 What-If Ripple Lab';
+          document.getElementById('act3-sub').textContent = 'Predict parameter shifts & edge cases';
+        } else {
+          legendEl.innerHTML = `
+            <span class="inline-flex items-center gap-1.5 font-semibold"><span class="w-3 h-3 rounded-sm inline-block" style="background: #3b82f6;"></span><span>Line / Zone 1</span></span>
+            <span class="inline-flex items-center gap-1.5 font-semibold"><span class="w-3 h-3 rounded-sm inline-block" style="background: #f97316;"></span><span>Line / Zone 2</span></span>
+            <span class="inline-flex items-center gap-1.5 font-semibold"><span class="w-3 h-3 rounded-sm inline-block" style="background: #22c55e;"></span><span>Solution / Overlap Zone</span></span>
+            <span class="inline-flex items-center gap-1.5 font-semibold"><span class="w-3 h-3 rounded-sm inline-block" style="background: #ef4444;"></span><span>Broken / Not Included</span></span>
+          `;
+          document.getElementById('act1-title').textContent = '📍 Web-Grid Graphing';
+          document.getElementById('act1-sub').textContent = 'Slope-Int, Point-Slope, Ax+By=C & Inequalities';
+          document.getElementById('act2-title').textContent = '🕷️ Graph Bug Hunter';
+          document.getElementById('act2-sub').textContent = 'Catch sign flips, dashed traps & shading bugs';
+          document.getElementById('act3-title').textContent = '🔮 What-If Graph Lab';
+          document.getElementById('act3-sub').textContent = 'Parallel shifts, vanishing zones & budgets';
+        }
+
+        document.querySelectorAll('.ch-tab').forEach((btn) => {
+          const c = Number(btn.dataset.ch);
+          if (c === state.ch) {
+            btn.classList.add('ring-2', 'ring-[var(--primary)]', 'border-[var(--primary)]');
+          } else {
+            btn.classList.remove('ring-2', 'ring-[var(--primary)]', 'border-[var(--primary)]');
+          }
+        });
+        document.querySelectorAll('.act-tab').forEach((btn) => {
+          const a = Number(btn.dataset.act);
+          if (a === state.act) {
+            btn.classList.add('ring-2', 'ring-[var(--primary)]', 'border-[var(--primary)]');
+          } else {
+            btn.classList.remove('ring-2', 'ring-[var(--primary)]', 'border-[var(--primary)]');
+          }
+        });
+      }
+
+      document.querySelectorAll('.ch-tab').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          state.ch = Number(btn.dataset.ch);
+          beep(440, 0.05);
+          render();
+        });
+      });
+
+      document.querySelectorAll('.act-tab').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          state.act = Number(btn.dataset.act);
+          beep(392, 0.05);
+          render();
+        });
+      });
+
+      // ---------- Formatting Helpers ----------
+      function fmtNum(n) {
+        if (Number.isInteger(n)) return n < 0 ? `−${Math.abs(n)}` : `${n}`;
+        return (n < 0 ? '−' : '') + Math.abs(Math.round(n * 100) / 100);
+      }
+      function fmtSide(xCoef, cVal, grouped) {
+        if (grouped) {
+          const innerSign = grouped.c < 0 ? '−' : '+';
+          const xPart = grouped.x === 1 ? 'x' : `${grouped.x}x`;
+          return `${grouped.outer}(${xPart} ${innerSign} ${Math.abs(grouped.c)})`;
+        }
+        if (xCoef === 0 && cVal === 0) return '0';
+        const parts = [];
+        if (xCoef !== 0) {
+          if (xCoef === 1) parts.push('x');
+          else if (xCoef === -1) parts.push('−x');
+          else parts.push(`${fmtNum(xCoef)}x`);
+        }
+        if (cVal !== 0) {
+          if (parts.length === 0) parts.push(fmtNum(cVal));
+          else parts.push(`${cVal < 0 ? '−' : '+'} ${Math.abs(Math.round(cVal * 100) / 100)}`);
+        }
+        return parts.join(' ');
+      }
+
+      // ---------- Visual Tile Renderer (SVG Balance Scale + Algebra Tiles) ----------
+      function renderTileBlocks(xCount, cCount, grouped) {
+        if (grouped) {
+          // Draw visual crate boxes: outer boxes each containing x + c
+          const crates = [];
+          for (let i = 0; i < grouped.outer; i++) {
+            crates.push(`
+              <div class="px-2 py-1 rounded-lg border-2 border-dashed border-amber-400 bg-amber-500/10 flex items-center gap-1">
+                <span class="px-1.5 py-0.5 rounded bg-orange-500 text-white text-xs font-bold font-mono">x</span>
+                <span class="px-1.5 py-0.5 rounded bg-blue-500 text-white text-xs font-bold font-mono">+${grouped.c}</span>
+              </div>
+            `);
+          }
+          return `<div class="flex flex-wrap justify-center gap-1.5">${crates.join('')}</div>`;
+        }
+        const blocks = [];
+        const absX = Math.min(Math.abs(Math.round(xCount)), 8);
+        for (let i = 0; i < absX; i++) {
+          const neg = xCount < 0;
+          blocks.push(`<span class="tile-pill px-2 py-1 rounded-md text-xs font-bold font-mono text-white shadow-sm" style="background:${neg ? '#ea580c' : '#f97316'}">${neg ? '−x' : 'x'}</span>`);
+        }
+        if (!Number.isInteger(xCount) && xCount !== 0) {
+          blocks.push(`<span class="tile-pill px-2 py-1 rounded-md text-xs font-bold font-mono text-white bg-orange-500">${fmtNum(xCount)}x</span>`);
+        }
+        const absC = Math.abs(cCount);
+        if (Number.isInteger(cCount) && absC <= 12) {
+          for (let i = 0; i < absC; i++) {
+            const neg = cCount < 0;
+            blocks.push(`<span class="tile-pill w-6 h-6 rounded-md text-xs font-bold font-mono text-white flex items-center justify-center shadow-sm" style="background:${neg ? '#a855f7' : '#3b82f6'}">${neg ? '−1' : '+1'}</span>`);
+          }
+        } else if (cCount !== 0) {
+          const neg = cCount < 0;
+          blocks.push(`<span class="tile-pill px-2.5 py-1 rounded-md text-xs font-bold font-mono text-white shadow-sm" style="background:${neg ? '#a855f7' : '#3b82f6'}">${fmtNum(cCount)}</span>`);
+        }
+        if (blocks.length === 0) {
+          blocks.push(`<span class="px-2.5 py-1 rounded-md text-xs font-bold font-mono border border-[var(--border)] text-[var(--muted-foreground)]">0</span>`);
+        }
+        return `<div class="flex flex-wrap justify-center items-center gap-1">${blocks.join('')}</div>`;
+      }
+
+      function renderScaleSvg(tiltDeg, statusColor, leftLabel, rightLabel) {
+        const rad = (tiltDeg * Math.PI) / 180;
+        const dy = Math.round(Math.sin(rad) * 140);
+        const dx = Math.round((1 - Math.cos(rad)) * 20);
+        return `
+          <svg viewBox="0 0 520 175" class="w-full max-w-lg mx-auto block select-none" role="img" aria-label="Equation balance scale">
+            <!-- Base & Fulcrum -->
+            <rect x="190" y="156" width="140" height="12" rx="6" fill="currentColor" opacity="0.2" />
+            <polygon points="260,132 238,158 282,158" fill="${statusColor}" />
+            <circle cx="260" cy="134" r="7" fill="var(--card)" stroke="${statusColor}" stroke-width="3" />
+
+            <!-- Tilting Beam -->
+            <g class="beam-group" style="transform: rotate(${tiltDeg}deg);">
+              <line x1="100" y1="134" x2="420" y2="134" stroke="${statusColor}" stroke-width="7" stroke-linecap="round" />
+              <circle cx="100" cy="134" r="5" fill="${statusColor}" />
+              <circle cx="420" cy="134" r="5" fill="${statusColor}" />
+            </g>
+
+            <!-- Left Pan -->
+            <g class="pan-group" style="transform: translate(${dx}px, ${-dy}px);">
+              <line x1="100" y1="134" x2="60" y2="96" stroke="currentColor" stroke-opacity="0.35" stroke-width="2" />
+              <line x1="100" y1="134" x2="140" y2="96" stroke="currentColor" stroke-opacity="0.35" stroke-width="2" />
+              <rect x="30" y="76" width="140" height="24" rx="8" fill="var(--background)" stroke="${statusColor}" stroke-width="2.5" />
+              <text x="100" y="92" text-anchor="middle" font-size="13" font-weight="700" font-family="ui-monospace, monospace" fill="currentColor">${leftLabel}</text>
+            </g>
+
+            <!-- Right Pan -->
+            <g class="pan-group" style="transform: translate(${-dx}px, ${dy}px);">
+              <line x1="420" y1="134" x2="380" y2="96" stroke="currentColor" stroke-opacity="0.35" stroke-width="2" />
+              <line x1="420" y1="134" x2="460" y2="96" stroke="currentColor" stroke-opacity="0.35" stroke-width="2" />
+              <rect x="350" y="76" width="140" height="24" rx="8" fill="var(--background)" stroke="${statusColor}" stroke-width="2.5" />
+              <text x="420" y="92" text-anchor="middle" font-size="13" font-weight="700" font-family="ui-monospace, monospace" fill="currentColor">${rightLabel}</text>
+            </g>
+
+            <!-- Center Status Pill -->
+            <rect x="218" y="14" width="84" height="24" rx="12" fill="${statusColor}" opacity="0.18" />
+            <text x="260" y="30" text-anchor="middle" font-size="12" font-weight="700" fill="${statusColor}">${tiltDeg === 0 ? 'LEVEL =' : 'TILTED ≠'}</text>
+          </svg>
+        `;
+      }
+
+      // ================================================================================
+      // ACT 1: WEB-BALANCE LAB (Interactive Visual Solver)
+      // ================================================================================
+      const act1Puzzles = [
+        {
+          title: 'Mission 1: Two-Step Rooftop Balance',
+          goalText: 'Get x alone on one side. Hint: clear loose +1 blocks BEFORE dividing!',
+          init: () => ({ lx: 2, lc: 3, rx: 0, rc: 11, grouped: null }),
+          ops: [
+            { label: '− 3 (both sides)', kind: 'addC', val: -3 },
+            { label: '+ 3 (both sides)', kind: 'addC', val: 3 },
+            { label: '÷ 2 (both sides)', kind: 'div', val: 2 },
+            { label: '× 2 (both sides)', kind: 'mul', val: 2 },
+          ],
+          sabotage: { label: '⚠️ Test: − 3 ONLY Left', msg: 'BROKE BALANCE! You removed 3 from the left without removing 3 from the right — the scale tilted!' },
+        },
+        {
+          title: 'Mission 2: Undo Negatives',
+          goalText: 'The −5 pulls the left side down. Use +5 to neutralize it!',
+          init: () => ({ lx: 4, lc: -5, rx: 0, rc: 15, grouped: null }),
+          ops: [
+            { label: '+ 5 (both sides)', kind: 'addC', val: 5 },
+            { label: '− 5 (both sides)', kind: 'addC', val: -5 },
+            { label: '÷ 4 (both sides)', kind: 'div', val: 4 },
+            { label: '÷ 5 (both sides)', kind: 'div', val: 5 },
+          ],
+          sabotage: { label: '⚠️ Test: ÷ 4 ONLY Left', msg: 'BROKE BALANCE! Dividing only one pan shrinks its weight while the right stays at 15!' },
+        },
+        {
+          title: 'Mission 3: Variables on Both Sides',
+          goalText: 'You have x-blocks on BOTH pans! Eliminate the smaller x-group first.',
+          init: () => ({ lx: 5, lc: 2, rx: 2, rc: 11, grouped: null }),
+          ops: [
+            { label: '− 2x (both sides)', kind: 'addX', val: -2 },
+            { label: '− 2 (both sides)', kind: 'addC', val: -2 },
+            { label: '− 11 (both sides)', kind: 'addC', val: -11 },
+            { label: '÷ 3 (both sides)', kind: 'div', val: 3 },
+          ],
+          sabotage: { label: '⚠️ Test: Add +2x Left Only', msg: 'BROKE BALANCE! Adding 2x to the left made it 7x instead of canceling the 2x on the right!' },
+        },
+        {
+          title: 'Mission 4: Unlock the Parentheses',
+          goalText: 'The (x + 2) is inside 3 crates! Either divide by 3 OR distribute the 3 first.',
+          init: () => ({ lx: 3, lc: 6, rx: 0, rc: 18, grouped: { outer: 3, x: 1, c: 2 } }),
+          ops: [
+            { label: '📦 Distribute 3', kind: 'dist' },
+            { label: '÷ 3 (both sides)', kind: 'div', val: 3 },
+            { label: '− 2 (both sides)', kind: 'addC', val: -2 },
+            { label: '− 6 (both sides)', kind: 'addC', val: -6 },
+          ],
+          sabotage: { label: '⚠️ Test: − 2 Inside Crate', msg: 'TRAPPED! You cannot pull +2 out of 3 sealed crates without either dividing by 3 or distributing 3 first (really removing 3×2 = 6)!' },
+        },
+      ];
+
+      let act1Session = null;
+      function initAct1Puzzle(idx) {
+        const p = act1Puzzles[idx];
+        act1Session = {
+          idx,
+          cur: p.init(),
+          history: [],
+          tilt: 0,
+          feedback: null,
+          solved: false,
+          moves: 0,
+        };
+      }
+
+      function isAct1Solved(c) {
+        if (c.grouped) return false;
+        return (c.lx === 1 && c.lc === 0 && c.rx === 0) || (c.rx === 1 && c.rc === 0 && c.lx === 0);
+      }
+
+      function renderAct1() {
+        const idx = state.idx[1];
+        if (!act1Session || act1Session.idx !== idx) initAct1Puzzle(idx);
+        const p = act1Puzzles[idx];
+        const s = act1Session;
+        const c = s.cur;
+
+        const leftStr = fmtSide(c.lx, c.lc, c.grouped);
+        const rightStr = fmtSide(c.rx, c.rc, null);
+        const statusColor = s.solved ? '#22c55e' : s.tilt !== 0 ? '#ef4444' : '#3b82f6';
+
+        stage.innerHTML = `
+          <div class="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-[var(--border)]">
+            <div class="flex items-center gap-1.5">
+              ${act1Puzzles.map((_, i) => `
+                <button data-pick1="${i}" class="px-2.5 py-1 rounded-lg text-xs font-bold cursor-pointer border ${i === idx ? 'bg-[var(--primary)] text-[var(--primary-foreground)] border-[var(--primary)]' : state.cleared[1][i] ? 'bg-emerald-500/15 text-emerald-500 border-emerald-500/40' : 'bg-[var(--background)] border-[var(--border)] text-[var(--muted-foreground)]'}">
+                  ${state.cleared[1][i] ? '✓ ' : ''}M${i + 1}
+                </button>
+              `).join('')}
+            </div>
+            <div class="text-xs text-[var(--muted-foreground)] font-mono">Moves: ${s.moves}</div>
+          </div>
+
+          <div class="space-y-1">
+            <h2 class="text-base font-bold m-0">${p.title}</h2>
+            <p class="text-xs text-[var(--muted-foreground)] m-0">${p.goalText}</p>
+          </div>
+
+          <!-- Big Equation Readout -->
+          <div class="rounded-xl bg-[var(--background)] border border-[var(--border)] p-3 text-center">
+            <div class="text-xs uppercase tracking-wider text-[var(--muted-foreground)] font-semibold mb-1">Live Equation</div>
+            <div class="text-2xl font-extrabold font-mono tracking-tight">
+              <span>${leftStr}</span>
+              <span class="mx-2 text-[var(--primary)]">=</span>
+              <span>${rightStr}</span>
+            </div>
+          </div>
+
+          <!-- Visual Scale + Physical Algebra Tiles -->
+          <div class="rounded-xl bg-[var(--background)] border border-[var(--border)] p-3 space-y-3">
+            ${renderScaleSvg(s.tilt, statusColor, leftStr, rightStr)}
+            <div class="grid grid-cols-2 gap-3 pt-2 border-t border-[var(--border)]">
+              <div class="text-center space-y-1.5">
+                <div class="text-xs font-semibold text-[var(--muted-foreground)]">Left Pan Blocks</div>
+                ${renderTileBlocks(c.lx, c.lc, c.grouped)}
+              </div>
+              <div class="text-center space-y-1.5">
+                <div class="text-xs font-semibold text-[var(--muted-foreground)]">Right Pan Blocks</div>
+                ${renderTileBlocks(c.rx, c.rc, null)}
+              </div>
+            </div>
+          </div>
+
+          <!-- Feedback Banner -->
+          ${s.feedback ? `
+            <div class="anim-in rounded-xl p-3 border text-xs font-semibold flex items-center justify-between gap-2 ${s.feedback.ok ? 'bg-emerald-500/15 border-emerald-500/50 text-emerald-400' : s.feedback.warn ? 'bg-rose-500/15 border-rose-500/50 text-rose-400' : 'bg-amber-500/15 border-amber-500/50 text-amber-400'}">
+              <span>${s.feedback.text}</span>
+              ${s.solved && idx < act1Puzzles.length - 1 ? `<button id="act1-next" class="px-3 py-1.5 rounded-lg bg-emerald-500 text-white font-bold text-xs cursor-pointer shrink-0">Next Mission →</button>` : ''}
+            </div>
+          ` : ''}
+
+          <!-- Tactile Action Buttons -->
+          <div class="space-y-2">
+            <div class="text-xs font-semibold text-[var(--muted-foreground)]">Choose a move to apply to BOTH sides:</div>
+            <div class="flex flex-wrap gap-2">
+              ${p.ops.map((op, oi) => `
+                <button data-op="${oi}" ${s.solved ? 'disabled' : ''} class="px-3.5 py-2.5 rounded-xl text-xs font-bold border border-[var(--border)] bg-[var(--secondary)] text-[var(--secondary-foreground)] hover:opacity-90 cursor-pointer disabled:opacity-40">
+                  ${op.label}
+                </button>
+              `).join('')}
+              <button id="act1-sabotage" ${s.solved ? 'disabled' : ''} class="px-3 py-2.5 rounded-xl text-xs font-bold border border-rose-500/40 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 cursor-pointer disabled:opacity-40">
+                ${p.sabotage.label}
+              </button>
+            </div>
+
+            <div class="flex items-center justify-between pt-2">
+              <div class="flex gap-2">
+                <button id="act1-undo" ${s.history.length === 0 || s.solved ? 'disabled' : ''} class="px-3 py-1.5 rounded-lg text-xs font-semibold border border-[var(--border)] bg-[var(--background)] cursor-pointer disabled:opacity-40">↩ Undo</button>
+                <button id="act1-reset" class="px-3 py-1.5 rounded-lg text-xs font-semibold border border-[var(--border)] bg-[var(--background)] cursor-pointer">↺ Reset</button>
+              </div>
+              <span class="text-xs text-[var(--muted-foreground)]">Tip: Same move on both sides keeps the beam level!</span>
+            </div>
+          </div>
+        `;
+
+        stage.querySelectorAll('[data-pick1]').forEach((b) => {
+          b.addEventListener('click', () => {
+            state.idx[1] = Number(b.dataset.pick1);
+            initAct1Puzzle(state.idx[1]);
+            renderAct1();
+          });
+        });
+
+        stage.querySelectorAll('[data-op]').forEach((b) => {
+          b.addEventListener('click', () => {
+            const op = p.ops[Number(b.dataset.op)];
+            if (s.solved) return;
+            // Check grouped parentheses lock
+            if (c.grouped && (op.kind === 'addC' || op.kind === 'addX')) {
+              sfxWarn();
+              s.feedback = { warn: true, text: '🔒 Locked inside parentheses! Click "Distribute 3" or "÷ 3" first.' };
+              renderAct1();
+              return;
+            }
+            s.history.push(JSON.parse(JSON.stringify(c)));
+            s.moves += 1;
+            s.tilt = 0;
+
+            if (op.kind === 'dist') {
+              c.grouped = null;
+              s.feedback = { ok: true, text: '📦 Unpacked! 3(x + 2) became 3x + 6.' };
+              beep(494, 0.08);
+            } else if (op.kind === 'addC') {
+              const before = Math.abs(c.lc) + Math.abs(c.rc);
+              c.lc = Math.round((c.lc + op.val) * 100) / 100;
+              c.rc = Math.round((c.rc + op.val) * 100) / 100;
+              const after = Math.abs(c.lc) + Math.abs(c.rc);
+              if (after < before) {
+                s.feedback = { ok: true, text: `✨ Cancelled! Both sides shifted cleanly.` };
+                beep(523, 0.08);
+              } else {
+                s.feedback = { text: `Scale is still balanced, but that added extra weight instead of canceling. Try Undo!` };
+                beep(330, 0.08);
+              }
+            } else if (op.kind === 'addX') {
+              c.lx += op.val;
+              c.rx += op.val;
+              s.feedback = { ok: true, text: `🕸️ Pulled ${Math.abs(op.val)}x from BOTH sides! Now x is on one side only.` };
+              beep(523, 0.08);
+            } else if (op.kind === 'div') {
+              if (c.grouped) {
+                if (c.grouped.outer === op.val && c.rc % op.val === 0) {
+                  c.lx = c.grouped.x;
+                  c.lc = c.grouped.c;
+                  c.rc = c.rc / op.val;
+                  c.grouped = null;
+                  s.feedback = { ok: true, text: `⚡ Smart shortcut! Dividing by ${op.val} unpacked (x + 2) directly.` };
+                  beep(587, 0.08);
+                } else {
+                  s.history.pop();
+                  s.moves -= 1;
+                  sfxWarn();
+                  s.feedback = { warn: true, text: `Dividing by ${op.val} doesn't divide evenly here.` };
+                }
+              } else {
+                const nlx = c.lx / op.val, nlc = c.lc / op.val, nrx = c.rx / op.val, nrc = c.rc / op.val;
+                if (!Number.isInteger(nlx) || !Number.isInteger(nlc) || !Number.isInteger(nrx) || !Number.isInteger(nrc)) {
+                  // Show why dividing before clearing constants creates messy fractions
+                  c.lx = nlx; c.lc = nlc; c.rx = nrx; c.rc = nrc;
+                  sfxWarn();
+                  s.feedback = { text: `⚠️ Messy fractions! Dividing before clearing the loose numbers splits every term by ${op.val}. Hit Undo and clear constants first!` };
+                } else {
+                  c.lx = nlx; c.lc = nlc; c.rx = nrx; c.rc = nrc;
+                  s.feedback = { ok: true, text: `✂️ Divided every term on both sides by ${op.val}!` };
+                  beep(587, 0.08);
+                }
+              }
+            } else if (op.kind === 'mul') {
+              c.lx *= op.val; c.lc *= op.val; c.rx *= op.val; c.rc *= op.val;
+              s.feedback = { text: `Multiplied both sides by ${op.val} — balanced, though bigger numbers!` };
+              beep(330, 0.08);
+            }
+
+            if (isAct1Solved(c)) {
+              s.solved = true;
+              const ans = c.lx === 1 ? c.rc : c.lc;
+              s.feedback = { ok: true, text: `🎉 SOLVED! x = ${fmtNum(ans)} in ${s.moves} moves! (+25 XP)` };
+              sfxWin();
+              addXP(25);
+              markCleared(1, idx);
+            }
+            renderAct1();
+          });
+        });
+
+        const sab = document.getElementById('act1-sabotage');
+        if (sab) sab.addEventListener('click', () => {
+          sfxWarn();
+          s.tilt = -12;
+          s.feedback = { warn: true, text: p.sabotage.msg };
+          renderAct1();
+          setTimeout(() => {
+            if (act1Session && act1Session.idx === idx && act1Session.tilt !== 0) {
+              act1Session.tilt = 0;
+              renderAct1();
+            }
+          }, 1600);
+        });
+
+        const undo = document.getElementById('act1-undo');
+        if (undo) undo.addEventListener('click', () => {
+          if (s.history.length > 0 && !s.solved) {
+            s.cur = s.history.pop();
+            s.tilt = 0;
+            s.feedback = null;
+            beep(350, 0.05);
+            renderAct1();
+          }
+        });
+        document.getElementById('act1-reset').addEventListener('click', () => {
+          initAct1Puzzle(idx);
+          beep(300, 0.05);
+          renderAct1();
+        });
+        const nextBtn = document.getElementById('act1-next');
+        if (nextBtn) nextBtn.addEventListener('click', () => {
+          state.idx[1] = idx + 1;
+          initAct1Puzzle(state.idx[1]);
+          renderAct1();
+        });
+      }
+
+      // ================================================================================
+      // ACT 2: SPIDEY-SENSE BUG HUNTER (Critical Thinking: Error Analysis)
+      // ================================================================================
+      const act2Puzzles = [
+        {
+          title: 'Case #1: Doc Ock’s Distribution',
+          given: '2(x − 4) = 10',
+          steps: [
+            { expr: '2x − 4 = 10', ok: false, tilt: -10 },
+            { expr: '2x = 14', ok: true, tilt: 0 },
+            { expr: 'x = 7', ok: true, tilt: 0 },
+          ],
+          badIdx: 0,
+          reasons: [
+            { text: 'Multiplied 2 by x, but forgot to multiply 2 by −4 (should be 2x − 8 = 10).', ok: true },
+            { text: 'Should have added 4 to 10 first to get 14.', ok: false },
+            { text: 'Forgot to flip the sign when dividing by 2.', ok: false },
+          ],
+          fixText: 'Correct Step 1: 2(x − 4) = 2x − 8 = 10 → 2x = 18 → x = 9.',
+        },
+        {
+          title: 'Case #2: Both-Sides Ambush',
+          given: '6x − 3 = 2x + 9',
+          steps: [
+            { expr: '8x − 3 = 9', ok: false, tilt: 11 },
+            { expr: '8x = 12', ok: true, tilt: 0 },
+            { expr: 'x = 1.5', ok: true, tilt: 0 },
+          ],
+          badIdx: 0,
+          reasons: [
+            { text: 'Added 2x to the left instead of subtracting 2x from both sides (should be 4x − 3 = 9).', ok: true },
+            { text: 'Forgot to add 3 to both sides first.', ok: false },
+            { text: '12 ÷ 8 is 2, not 1.5.', ok: false },
+          ],
+          fixText: 'Correct Step 1: Subtract 2x from BOTH sides → 4x − 3 = 9 → 4x = 12 → x = 3.',
+        },
+        {
+          title: 'Case #3: Half-Baked Division',
+          given: '3x + 6 = 21',
+          steps: [
+            { expr: 'x + 6 = 7', ok: false, tilt: -11 },
+            { expr: 'x = 1', ok: true, tilt: 0 },
+          ],
+          badIdx: 0,
+          reasons: [
+            { text: 'Divided 3x and 21 by 3, but forgot to divide +6 by 3 too.', ok: true },
+            { text: 'You are never allowed to divide first in an equation.', ok: false },
+            { text: '7 − 6 should equal 13, not 1.', ok: false },
+          ],
+          fixText: 'Either subtract 6 first (3x = 15 → x = 5) OR divide EVERY term by 3 (x + 2 = 7 → x = 5).',
+        },
+        {
+          title: 'Case #4: The Stealth Negative',
+          given: '−2x + 5 = 13',
+          steps: [
+            { expr: '−2x = 8', ok: true, tilt: 0 },
+            { expr: 'x = 4', ok: false, tilt: 10 },
+          ],
+          badIdx: 1,
+          reasons: [
+            { text: 'Divided 8 by +2 instead of −2: 8 ÷ (−2) = −4.', ok: true },
+            { text: 'Should have added 5 to 13 to get 18.', ok: false },
+            { text: 'A negative coefficient means there is no solution.', ok: false },
+          ],
+          fixText: 'Check: −2(−4) + 5 = 8 + 5 = 13 ✓ (plugging in 4 gives −8 + 5 = −3 ≠ 13!).',
+        },
+      ];
+
+      let act2Session = null;
+      function initAct2Puzzle(idx) {
+        act2Session = { idx, pickedStep: null, stepCorrect: false, pickedReason: null, solved: false, msg: null };
+      }
+
+      function renderAct2() {
+        const idx = state.idx[2];
+        if (!act2Session || act2Session.idx !== idx) initAct2Puzzle(idx);
+        const p = act2Puzzles[idx];
+        const s = act2Session;
+
+        stage.innerHTML = `
+          <div class="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-[var(--border)]">
+            <div class="flex items-center gap-1.5">
+              ${act2Puzzles.map((_, i) => `
+                <button data-pick2="${i}" class="px-2.5 py-1 rounded-lg text-xs font-bold cursor-pointer border ${i === idx ? 'bg-[var(--primary)] text-[var(--primary-foreground)] border-[var(--primary)]' : state.cleared[2][i] ? 'bg-emerald-500/15 text-emerald-500 border-emerald-500/40' : 'bg-[var(--background)] border-[var(--border)] text-[var(--muted-foreground)]'}">
+                  ${state.cleared[2][i] ? '✓ ' : ''}C${i + 1}
+                </button>
+              `).join('')}
+            </div>
+            <span class="text-xs font-semibold text-[var(--warning)]">NJSLA Reasoning Drill (A-REI.A.1)</span>
+          </div>
+
+          <div class="space-y-1">
+            <h2 class="text-base font-bold m-0">${p.title}</h2>
+            <p class="text-xs text-[var(--muted-foreground)] m-0">
+              ${!s.stepCorrect ? 'Step 1 of 2: Tap the EXACT line where the balance broke!' : 'Step 2 of 2: Explain WHY that step broke the equation.'}
+            </p>
+          </div>
+
+          <!-- Given + Steps Board -->
+          <div class="rounded-xl bg-[var(--background)] border border-[var(--border)] p-4 space-y-2.5">
+            <div class="flex items-center justify-between px-3 py-2 rounded-lg bg-[var(--card)] border border-[var(--border)]">
+              <span class="text-xs font-bold text-[var(--muted-foreground)] uppercase">Given</span>
+              <span class="text-lg font-extrabold font-mono">${p.given}</span>
+              <span class="text-xs px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-400 font-semibold">Balanced =</span>
+            </div>
+
+            ${p.steps.map((st, si) => {
+              const isPicked = s.pickedStep === si;
+              const showCrack = s.stepCorrect && si === p.badIdx;
+              const cls = showCrack
+                ? 'border-rose-500 bg-rose-500/15'
+                : isPicked && !st.ok
+                ? 'border-rose-500 bg-rose-500/15'
+                : isPicked && st.ok
+                ? 'border-amber-500 bg-amber-500/10'
+                : 'border-[var(--border)] bg-[var(--card)] hover:border-[var(--primary)]';
+              return `
+                <button data-step="${si}" ${s.stepCorrect ? 'disabled' : ''} class="w-full text-left flex items-center justify-between gap-3 px-3.5 py-3 rounded-xl border-2 transition cursor-pointer ${cls}">
+                  <div class="flex items-center gap-3">
+                    <span class="w-6 h-6 rounded-full bg-[var(--background)] border border-[var(--border)] flex items-center justify-center text-xs font-bold">${si + 1}</span>
+                    <span class="text-base font-bold font-mono">${st.expr}</span>
+                  </div>
+                  <span class="text-xs font-semibold ${showCrack ? 'text-rose-400' : 'text-[var(--muted-foreground)]'}">
+                    ${showCrack ? '💥 Balance Broken!' : s.stepCorrect ? '✓' : 'Tap if broken →'}
+                  </span>
+                </button>
+              `;
+            }).join('')}
+          </div>
+
+          <!-- Part 2: Why did it break? -->
+          ${s.stepCorrect ? `
+            <div class="anim-in space-y-2 pt-1">
+              <div class="text-xs font-bold text-[var(--foreground)]">Why did Step ${p.badIdx + 1} break the balance?</div>
+              <div class="grid gap-2">
+                ${p.reasons.map((r, ri) => {
+                  const chosen = s.pickedReason === ri;
+                  const cls = s.solved && r.ok
+                    ? 'border-emerald-500 bg-emerald-500/15 text-emerald-400'
+                    : chosen && !r.ok
+                    ? 'border-rose-500 bg-rose-500/15 text-rose-400'
+                    : 'border-[var(--border)] bg-[var(--background)] hover:border-[var(--primary)]';
+                  return `
+                    <button data-reason="${ri}" ${s.solved ? 'disabled' : ''} class="text-left px-3.5 py-2.5 rounded-xl border-2 text-xs font-semibold transition cursor-pointer ${cls}">
+                      ${r.text}
+                    </button>
+                  `;
+                }).join('')}
+              </div>
+            </div>
+          ` : ''}
+
+          ${s.msg ? `
+            <div class="anim-in rounded-xl p-3 border text-xs font-semibold flex flex-wrap items-center justify-between gap-2 ${s.solved ? 'bg-emerald-500/15 border-emerald-500/50 text-emerald-400' : 'bg-amber-500/15 border-amber-500/50 text-amber-400'}">
+              <div>
+                <div>${s.msg}</div>
+                ${s.solved ? `<div class="mt-1 font-mono text-[var(--foreground)]">${p.fixText}</div>` : ''}
+              </div>
+              ${s.solved && idx < act2Puzzles.length - 1 ? `<button id="act2-next" class="px-3 py-1.5 rounded-lg bg-emerald-500 text-white font-bold text-xs cursor-pointer shrink-0">Next Case →</button>` : ''}
+            </div>
+          ` : ''}
+        `;
+
+        stage.querySelectorAll('[data-pick2]').forEach((b) => {
+          b.addEventListener('click', () => {
+            state.idx[2] = Number(b.dataset.pick2);
+            initAct2Puzzle(state.idx[2]);
+            renderAct2();
+          });
+        });
+
+        stage.querySelectorAll('[data-step]').forEach((b) => {
+          b.addEventListener('click', () => {
+            const si = Number(b.dataset.step);
+            s.pickedStep = si;
+            if (si === p.badIdx) {
+              s.stepCorrect = true;
+              s.msg = '🎯 Spidey-Sense hit! Now pick WHY that step broke the math.';
+              sfxGood();
+            } else {
+              sfxWarn();
+              breakStreak();
+              s.msg = `Step ${si + 1} actually followed legally from the line above it — check earlier!`;
+            }
+            renderAct2();
+          });
+        });
+
+        stage.querySelectorAll('[data-reason]').forEach((b) => {
+          b.addEventListener('click', () => {
+            const ri = Number(b.dataset.reason);
+            s.pickedReason = ri;
+            if (p.reasons[ri].ok) {
+              s.solved = true;
+              s.msg = '✅ Nailed the bug AND the reason! (+30 XP)';
+              sfxWin();
+              addXP(30);
+              markCleared(2, idx);
+            } else {
+              sfxWarn();
+              breakStreak();
+              s.msg = 'Not quite — compare the two sides of Step ' + (p.badIdx + 1) + ' against the Given equation.';
+            }
+            renderAct2();
+          });
+        });
+
+        const nxt = document.getElementById('act2-next');
+        if (nxt) nxt.addEventListener('click', () => {
+          state.idx[2] = idx + 1;
+          initAct2Puzzle(state.idx[2]);
+          renderAct2();
+        });
+      }
+
+      // ================================================================================
+      // ACT 3: SECOND-ORDER THINKING LAB ("Predict → Test with Live Sliders → Master")
+      // ================================================================================
+      const act3Puzzles = [
+        {
+          id: 'ripple',
+          title: 'Lab 1: Does Doubling the Target Double x?',
+          prompt: 'Start with 2x + 6 = 14 (here x = 4). Suppose the right side DOUBLES from 14 to 28 (so 2x + 6 = 28). What happens to x?',
+          choices: [
+            { text: 'x doubles to 8', ok: false },
+            { text: 'x MORE than doubles (jumps to 11)', ok: true },
+            { text: 'x stays 4 because 2x didn’t change', ok: false },
+          ],
+          explain: 'Second-order insight: The +6 stayed fixed, so ALL +14 of the increase went into 2x! That added +7 to x (4 → 11), not +4.',
+          slider: { label: 'Right-side value R', min: 10, max: 30, step: 2, init: 14, target: 28 },
+          renderVisual: (R) => {
+            const x = (R - 6) / 2;
+            const pct = Math.min(100, Math.round((x / 12) * 100));
+            return `
+              <div class="grid sm:grid-cols-2 gap-3 items-center">
+                <div class="rounded-xl bg-[var(--card)] border border-[var(--border)] p-3 text-center space-y-1">
+                  <div class="text-xs text-[var(--muted-foreground)]">Live Equation</div>
+                  <div class="text-xl font-extrabold font-mono">2x + 6 = <span class="text-[var(--primary)]">${R}</span></div>
+                  <div class="text-sm font-bold font-mono text-emerald-400">2x = ${R - 6} → x = ${fmtNum(x)}</div>
+                </div>
+                <div class="rounded-xl bg-[var(--card)] border border-[var(--border)] p-3 space-y-2">
+                  <div class="flex justify-between text-xs font-semibold">
+                    <span>Where the weight goes:</span>
+                    <span class="font-mono text-orange-400">x = ${fmtNum(x)}</span>
+                  </div>
+                  <div class="h-4 rounded-full bg-[var(--background)] border border-[var(--border)] overflow-hidden flex">
+                    <div class="h-full bg-blue-500 transition-all" style="width: 22%" title="Fixed +6"></div>
+                    <div class="h-full bg-orange-500 transition-all" style="width: ${pct}%" title="2x absorbs all growth"></div>
+                  </div>
+                  <div class="flex justify-between text-xs text-[var(--muted-foreground)]">
+                    <span>🟦 Fixed +6</span>
+                    <span>🟧 2x absorbs growth!</span>
+                  </div>
+                </div>
+              </div>
+            `;
+          },
+        },
+        {
+          id: 'nosol',
+          title: 'Lab 2: Break the Equation (0 vs ∞ Solutions)',
+          prompt: 'Look at kx + 4 = 3x + 10. For what value of k does the equation have NO SOLUTION at all?',
+          choices: [
+            { text: 'k = 0 (makes left side constant)', ok: false },
+            { text: 'k = 3 (x-blocks cancel, leaving 4 = 10)', ok: true },
+            { text: 'k = 10 (matches the constant)', ok: false },
+          ],
+          explain: 'Second-order insight: When both sides have the SAME x-rate (k = 3), subtracting 3x kills x completely, leaving 4 = 10 (parallel lines that never cross!).',
+          slider: { label: 'Coefficient k', min: 0, max: 6, step: 1, init: 5, target: 3 },
+          renderVisual: (k) => {
+            const diff = k - 3;
+            const sol = diff === 0 ? 'NONE (4 ≠ 10)' : fmtNum(6 / diff);
+            // Mini SVG showing two lines y = kx + 4 and y = 3x + 10
+            const lineY1 = (x) => 95 - (k * x + 4) * 3.5;
+            const lineY2 = (x) => 95 - (3 * x + 10) * 3.5;
+            return `
+              <div class="grid sm:grid-cols-2 gap-3 items-center">
+                <div class="rounded-xl bg-[var(--card)] border border-[var(--border)] p-3 text-center space-y-1">
+                  <div class="text-xs text-[var(--muted-foreground)]">Live Equation</div>
+                  <div class="text-xl font-extrabold font-mono"><span class="text-orange-400">${k}</span>x + 4 = 3x + 10</div>
+                  <div class="text-sm font-bold font-mono ${diff === 0 ? 'text-rose-400' : 'text-emerald-400'}">
+                    ${diff === 0 ? '🚫 NO SOLUTION (Parallel!)' : `Solution: x = ${sol}`}
+                  </div>
+                </div>
+                <div class="rounded-xl bg-[var(--card)] border border-[var(--border)] p-2">
+                  <svg viewBox="0 0 200 110" class="w-full h-24 block" role="img" aria-label="Two lines comparing slopes">
+                    <line x1="10" y1="95" x2="190" y2="95" stroke="currentColor" stroke-opacity="0.2" />
+                    <line x1="20" y1="5" x2="20" y2="105" stroke="currentColor" stroke-opacity="0.2" />
+                    <line x1="20" y1="${lineY1(0)}" x2="170" y2="${lineY1(5)}" stroke="#f97316" stroke-width="3" />
+                    <line x1="20" y1="${lineY2(0)}" x2="170" y2="${lineY2(5)}" stroke="#3b82f6" stroke-width="3" />
+                    <text x="140" y="18" font-size="11" font-weight="700" fill="${diff === 0 ? '#f43f5e' : '#22c55e'}">${diff === 0 ? 'PARALLEL!' : 'CROSSES'}</text>
+                  </svg>
+                </div>
+              </div>
+            `;
+          },
+        },
+        {
+          id: 'reverse',
+          title: 'Lab 3: Reverse-Engineer the Answer (x = 5)',
+          prompt: 'Design challenge: In 4x − b = 2x + 6, what value of b FORCES the solution to be x = 5?',
+          choices: [
+            { text: 'b = 4', ok: true },
+            { text: 'b = 6', ok: false },
+            { text: 'b = 2', ok: false },
+          ],
+          explain: 'Second-order insight: Plug x = 5 in FIRST! Left = 4(5) − b = 20 − b, Right = 2(5) + 6 = 16. For 20 − b = 16, b must be 4!',
+          slider: { label: 'Parameter b', min: 0, max: 10, step: 1, init: 2, target: 4 },
+          renderVisual: (b) => {
+            const x = (6 + b) / 2;
+            const locked = x === 5;
+            return `
+              <div class="rounded-xl bg-[var(--card)] border border-[var(--border)] p-3 flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <div class="text-xs text-[var(--muted-foreground)]">Live Equation</div>
+                  <div class="text-xl font-extrabold font-mono">4x − <span class="text-purple-400">${b}</span> = 2x + 6</div>
+                </div>
+                <div class="text-right">
+                  <div class="text-xs text-[var(--muted-foreground)]">Resulting Solution</div>
+                  <div class="text-xl font-extrabold font-mono ${locked ? 'text-emerald-400' : 'text-amber-400'}">
+                    x = ${fmtNum(x)} ${locked ? '🎯 LOCKED!' : '(Target: 5)'}
+                  </div>
+                </div>
+              </div>
+            `;
+          },
+        },
+        {
+          id: 'constraint',
+          title: 'Lab 4: Real-World Viability (NJSLA Modeling)',
+          prompt: 'Web cartridges cost $6 each + $8 shipping. Budget = $35 (6c + 8 = 35 → c = 4.5). If shipping jumps from $8 to $12, what is the MAX whole cartridges you can buy?',
+          choices: [
+            { text: 'Still 4 cartridges', ok: false },
+            { text: 'Drops to 3 cartridges (because 3.83 rounds DOWN, not up!)', ok: true },
+            { text: '3.83 cartridges', ok: false },
+          ],
+          explain: 'Second-order insight (A-CED.A.3): You cannot buy 0.83 of a cartridge, AND rounding up to 4 costs $36 (over budget!). Budget constraints always round DOWN to whole items.',
+          slider: { label: 'Shipping cost ($)', min: 5, max: 17, step: 1, init: 8, target: 12 },
+          renderVisual: (ship) => {
+            const raw = (35 - ship) / 6;
+            const maxWhole = Math.floor(raw);
+            return `
+              <div class="rounded-xl bg-[var(--card)] border border-[var(--border)] p-3 space-y-2">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                  <div class="text-base font-extrabold font-mono">6c + <span class="text-blue-400">$${ship}</span> ≤ $35</div>
+                  <div class="text-xs font-mono text-[var(--muted-foreground)]">Exact math: c = ${raw.toFixed(2)}</div>
+                </div>
+                <div class="flex items-center gap-1.5 flex-wrap">
+                  ${Array.from({ length: 5 }, (_, i) => `
+                    <span class="px-2.5 py-1 rounded-lg text-xs font-bold border ${i < maxWhole ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400' : 'bg-rose-500/10 border-rose-500/30 text-rose-400 opacity-60'}">
+                      🕸️ #${i + 1} ($${6 * (i + 1) + ship})
+                    </span>
+                  `).join('')}
+                </div>
+                <div class="text-xs font-semibold text-emerald-400">Max affordable whole cartridges: ${maxWhole}</div>
+              </div>
+            `;
+          },
+        },
+      ];
+
+      let act3Session = null;
+      function initAct3Puzzle(idx) {
+        const p = act3Puzzles[idx];
+        act3Session = { idx, predicted: null, solved: false, val: p.slider.init, msg: null };
+      }
+
+      function renderAct3() {
+        const idx = state.idx[3];
+        if (!act3Session || act3Session.idx !== idx) initAct3Puzzle(idx);
+        const p = act3Puzzles[idx];
+        const s = act3Session;
+
+        stage.innerHTML = `
+          <div class="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-[var(--border)]">
+            <div class="flex items-center gap-1.5">
+              ${act3Puzzles.map((_, i) => `
+                <button data-pick3="${i}" class="px-2.5 py-1 rounded-lg text-xs font-bold cursor-pointer border ${i === idx ? 'bg-[var(--primary)] text-[var(--primary-foreground)] border-[var(--primary)]' : state.cleared[3][i] ? 'bg-emerald-500/15 text-emerald-500 border-emerald-500/40' : 'bg-[var(--background)] border-[var(--border)] text-[var(--muted-foreground)]'}">
+                  ${state.cleared[3][i] ? '✓ ' : ''}L${i + 1}
+                </button>
+              `).join('')}
+            </div>
+            <span class="text-xs font-semibold text-[var(--success)]">Second-Order Thinking Lab</span>
+          </div>
+
+          <div class="space-y-1">
+            <h2 class="text-base font-bold m-0">${p.title}</h2>
+            <p class="text-sm font-medium m-0">${p.prompt}</p>
+          </div>
+
+          <!-- Interactive Experiment Slider -->
+          <div class="rounded-xl bg-[var(--background)] border border-[var(--border)] p-3.5 space-y-3">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <label class="text-xs font-bold flex items-center gap-2">
+                <span>🔬 Experiment Slider — ${p.slider.label}:</span>
+                <span id="act3-readout" class="px-2 py-0.5 rounded bg-[var(--card)] border border-[var(--border)] font-mono">${s.val}</span>
+              </label>
+              <button id="act3-snap" type="button" class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-[var(--secondary)] text-[var(--secondary-foreground)] border border-[var(--border)] cursor-pointer">
+                Jump to target (${p.slider.target})
+              </button>
+            </div>
+            <input id="act3-slider" type="range" min="${p.slider.min}" max="${p.slider.max}" step="${p.slider.step}" value="${s.val}" class="w-full accent-[var(--primary)] cursor-pointer" />
+            <div id="act3-viz">${p.renderVisual(s.val)}</div>
+          </div>
+
+          <!-- Prediction Choices -->
+          <div class="space-y-2">
+            <div class="text-xs font-bold text-[var(--muted-foreground)] uppercase tracking-wider">Lock in your conclusion:</div>
+            <div class="grid gap-2">
+              ${p.choices.map((ch, ci) => {
+                const picked = s.predicted === ci;
+                const cls = s.solved && ch.ok
+                  ? 'border-emerald-500 bg-emerald-500/15 text-emerald-400'
+                  : picked && !ch.ok
+                  ? 'border-rose-500 bg-rose-500/15 text-rose-400'
+                  : 'border-[var(--border)] bg-[var(--background)] hover:border-[var(--primary)]';
+                return `
+                  <button data-ch3="${ci}" ${s.solved ? 'disabled' : ''} class="text-left px-3.5 py-2.5 rounded-xl border-2 text-xs font-semibold transition cursor-pointer ${cls}">
+                    ${ch.text}
+                  </button>
+                `;
+              }).join('')}
+            </div>
+          </div>
+
+          ${s.msg ? `
+            <div class="anim-in rounded-xl p-3 border text-xs font-semibold flex flex-wrap items-center justify-between gap-2 ${s.solved ? 'bg-emerald-500/15 border-emerald-500/50 text-emerald-400' : 'bg-amber-500/15 border-amber-500/50 text-amber-400'}">
+              <div>
+                <div>${s.msg}</div>
+                ${s.solved ? `<div class="mt-1 text-[var(--foreground)] font-normal">${p.explain}</div>` : ''}
+              </div>
+              ${s.solved && idx < act3Puzzles.length - 1 ? `<button id="act3-next" class="px-3 py-1.5 rounded-lg bg-emerald-500 text-white font-bold text-xs cursor-pointer shrink-0">Next Lab →</button>` : ''}
+            </div>
+          ` : ''}
+        `;
+
+        stage.querySelectorAll('[data-pick3]').forEach((b) => {
+          b.addEventListener('click', () => {
+            state.idx[3] = Number(b.dataset.pick3);
+            initAct3Puzzle(state.idx[3]);
+            renderAct3();
+          });
+        });
+
+        const slider = document.getElementById('act3-slider');
+        const readout = document.getElementById('act3-readout');
+        const viz = document.getElementById('act3-viz');
+        slider.addEventListener('input', () => {
+          s.val = Number(slider.value);
+          readout.textContent = s.val;
+          viz.innerHTML = p.renderVisual(s.val);
+        });
+        document.getElementById('act3-snap').addEventListener('click', () => {
+          s.val = p.slider.target;
+          slider.value = s.val;
+          readout.textContent = s.val;
+          viz.innerHTML = p.renderVisual(s.val);
+          beep(440, 0.06);
+        });
+
+        stage.querySelectorAll('[data-ch3]').forEach((b) => {
+          b.addEventListener('click', () => {
+            const ci = Number(b.dataset.ch3);
+            s.predicted = ci;
+            if (p.choices[ci].ok) {
+              s.solved = true;
+              s.msg = '🔮 Second-Order Mastery! (+35 XP)';
+              sfxWin();
+              addXP(35);
+              markCleared(3, idx);
+            } else {
+              sfxWarn();
+              breakStreak();
+              s.msg = 'Try dragging the Experiment Slider above to the target value and watch what happens!';
+            }
+            renderAct3();
+          });
+        });
+
+        const nxt = document.getElementById('act3-next');
+        if (nxt) nxt.addEventListener('click', () => {
+          state.idx[3] = idx + 1;
+          initAct3Puzzle(state.idx[3]);
+          renderAct3();
+        });
+      }
+
+      // ================================================================================
+      // CHAPTER 2: SYSTEMS OF EQUATIONS & INEQUALITIES BY GRAPHING
+      // ================================================================================
+      const GRID_MIN = -6;
+      const GRID_MAX = 6;
+      const GRID_PAD = 24;
+      const GRID_STEP = 26; // 12 * 26 = 312 -> total 360x360
+      const toSvgX = (x) => GRID_PAD + (x - GRID_MIN) * GRID_STEP;
+      const toSvgY = (y) => GRID_PAD + (GRID_MAX - y) * GRID_STEP;
+
+      function clipHalfPlane(poly, a, b, op, c) {
+        if (!poly.length) return [];
+        const isLe = op === '<=' || op === '<';
+        const isIn = (pt) => (isLe ? a * pt.x + b * pt.y <= c + 1e-7 : a * pt.x + b * pt.y >= c - 1e-7);
+        const intersect = (p1, p2) => {
+          const f1 = a * p1.x + b * p1.y - c;
+          const f2 = a * p2.x + b * p2.y - c;
+          const denom = f1 - f2;
+          if (Math.abs(denom) < 1e-9) return p1;
+          const t = f1 / denom;
+          return { x: p1.x + t * (p2.x - p1.x), y: p1.y + t * (p2.y - p1.y) };
+        };
+        const out = [];
+        for (let i = 0; i < poly.length; i++) {
+          const p1 = poly[i];
+          const p2 = poly[(i + 1) % poly.length];
+          const in1 = isIn(p1);
+          const in2 = isIn(p2);
+          if (in1 && in2) {
+            out.push(p2);
+          } else if (in1 && !in2) {
+            out.push(intersect(p1, p2));
+          } else if (!in1 && in2) {
+            out.push(intersect(p1, p2));
+            out.push(p2);
+          }
+        }
+        return out;
+      }
+
+      const FULL_BOX = [
+        { x: GRID_MIN, y: GRID_MIN },
+        { x: GRID_MAX, y: GRID_MIN },
+        { x: GRID_MAX, y: GRID_MAX },
+        { x: GRID_MIN, y: GRID_MAX },
+      ];
+
+      function polyToPointsAttr(poly) {
+        return poly.map((p) => `${toSvgX(p.x).toFixed(1)},${toSvgY(p.y).toFixed(1)}`).join(' ');
+      }
+
+      function lineSegmentInBox(a, b, c) {
+        const pts = [];
+        const addIfIn = (x, y) => {
+          if (x >= GRID_MIN - 1e-5 && x <= GRID_MAX + 1e-5 && y >= GRID_MIN - 1e-5 && y <= GRID_MAX + 1e-5) {
+            if (!pts.some((p) => Math.hypot(p.x - x, p.y - y) < 1e-3)) pts.push({ x, y });
+          }
+        };
+        if (Math.abs(b) > 1e-6) {
+          addIfIn(GRID_MIN, (c - a * GRID_MIN) / b);
+          addIfIn(GRID_MAX, (c - a * GRID_MAX) / b);
+        }
+        if (Math.abs(a) > 1e-6) {
+          addIfIn((c - b * GRID_MIN) / a, GRID_MIN);
+          addIfIn((c - b * GRID_MAX) / a, GRID_MAX);
+        }
+        return pts.length >= 2 ? [pts[0], pts[1]] : null;
+      }
+
+      function buildCoordSvg({ lines = [], shades = [], overlapPoly = null, dots = [], interactive = false, testDot = null, sizeClass = 'w-full max-w-md mx-auto block' }) {
+        let gridLines = '';
+        for (let v = GRID_MIN; v <= GRID_MAX; v++) {
+          const sx = toSvgX(v);
+          const sy = toSvgY(v);
+          const isAxis = v === 0;
+          gridLines += `<line x1="${sx}" y1="${GRID_PAD}" x2="${sx}" y2="${toSvgY(GRID_MIN)}" stroke="currentColor" stroke-opacity="${isAxis ? 0.55 : 0.14}" stroke-width="${isAxis ? 2 : 1}" />`;
+          gridLines += `<line x1="${GRID_PAD}" y1="${sy}" x2="${toSvgX(GRID_MAX)}" y2="${sy}" stroke="currentColor" stroke-opacity="${isAxis ? 0.55 : 0.14}" stroke-width="${isAxis ? 2 : 1}" />`;
+          if (v !== 0 && v % 2 === 0) {
+            gridLines += `<text x="${sx}" y="${toSvgY(0) + 13}" text-anchor="middle" font-size="10" fill="currentColor" opacity="0.65" font-family="ui-monospace, monospace">${v}</text>`;
+            gridLines += `<text x="${toSvgX(0) - 9}" y="${sy + 3}" text-anchor="end" font-size="10" fill="currentColor" opacity="0.65" font-family="ui-monospace, monospace">${v}</text>`;
+          }
+        }
+        gridLines += `<text x="${toSvgX(GRID_MAX) + 10}" y="${toSvgY(0) + 4}" font-size="11" font-weight="700" fill="currentColor" opacity="0.8">x</text>`;
+        gridLines += `<text x="${toSvgX(0) + 6}" y="${toSvgY(GRID_MAX) - 6}" font-size="11" font-weight="700" fill="currentColor" opacity="0.8">y</text>`;
+
+        let shadeMarkup = '';
+        shades.forEach((sh) => {
+          const poly = clipHalfPlane(FULL_BOX, sh.a, sh.b, sh.op, sh.c);
+          if (poly.length >= 3) {
+            shadeMarkup += `<polygon points="${polyToPointsAttr(poly)}" fill="${sh.color}" fill-opacity="0.18" />`;
+          }
+        });
+        if (overlapPoly && overlapPoly.length >= 3) {
+          shadeMarkup += `<polygon points="${polyToPointsAttr(overlapPoly)}" fill="#22c55e" fill-opacity="0.34" />`;
+        }
+
+        let lineMarkup = '';
+        lines.forEach((ln) => {
+          const seg = lineSegmentInBox(ln.a, ln.b, ln.c);
+          if (!seg) return;
+          const dash = ln.dashed ? 'stroke-dasharray="7 6"' : '';
+          lineMarkup += `<line x1="${toSvgX(seg[0].x)}" y1="${toSvgY(seg[0].y)}" x2="${toSvgX(seg[1].x)}" y2="${toSvgY(seg[1].y)}" stroke="${ln.color}" stroke-width="3.2" stroke-linecap="round" ${dash} />`;
+        });
+
+        let dotMarkup = '';
+        if (testDot) {
+          dotMarkup += `
+            <circle cx="${toSvgX(testDot.x)}" cy="${toSvgY(testDot.y)}" r="7" fill="none" stroke="#eab308" stroke-width="2" stroke-dasharray="3 2" />
+            <text x="${toSvgX(testDot.x) + 8}" y="${toSvgY(testDot.y) - 6}" font-size="10" font-weight="700" fill="#eab308">Test (${testDot.x},${testDot.y})</text>
+          `;
+        }
+        dots.forEach((d) => {
+          const cx = toSvgX(d.x), cy = toSvgY(d.y);
+          const ring = d.pulse ? `<circle cx="${cx}" cy="${cy}" r="11" fill="none" stroke="${d.color}" stroke-width="2" opacity="0.6" />` : '';
+          dotMarkup += `
+            ${ring}
+            <circle cx="${cx}" cy="${cy}" r="5.5" fill="${d.color}" stroke="var(--background)" stroke-width="2" />
+            ${d.label ? `<rect x="${cx + 7}" y="${cy - 18}" width="${d.label.length * 6.5 + 10}" height="16" rx="4" fill="var(--card)" stroke="${d.color}" stroke-width="1" />
+              <text x="${cx + 12}" y="${cy - 7}" font-size="10" font-weight="700" font-family="ui-monospace, monospace" fill="${d.color}">${d.label}</text>` : ''}
+          `;
+        });
+
+        let hitMarkup = '';
+        if (interactive) {
+          for (let gx = GRID_MIN; gx <= GRID_MAX; gx++) {
+            for (let gy = GRID_MIN; gy <= GRID_MAX; gy++) {
+              hitMarkup += `<circle data-gx="${gx}" data-gy="${gy}" cx="${toSvgX(gx)}" cy="${toSvgY(gy)}" r="10" fill="transparent" class="grid-hit cursor-pointer" />`;
+            }
+          }
+        }
+
+        return `
+          <svg viewBox="0 0 360 360" class="${sizeClass} select-none rounded-xl bg-[var(--card)] border border-[var(--border)]" role="img" aria-label="Coordinate plane from -6 to 6">
+            <defs>
+              <clipPath id="grid-clip">
+                <rect x="${GRID_PAD}" y="${GRID_PAD}" width="${12 * GRID_STEP}" height="${12 * GRID_STEP}" />
+              </clipPath>
+            </defs>
+            <g clip-path="url(#grid-clip)">
+              ${shadeMarkup}
+              ${gridLines}
+              ${lineMarkup}
+            </g>
+            ${dotMarkup}
+            ${hitMarkup}
+          </svg>
+        `;
+      }
+
+      // ---------- Chapter 2 Act 1: Web-Grid Graphing Lab ----------
+      const ch2Act1Puzzles = [
+        {
+          id: 'si',
+          methodTag: 'Method A · Slope-Intercept (y = mx + b)',
+          title: 'Mission 1: Sling Two Slope-Intercept Lines',
+          kind: 'system_eq',
+          l1: {
+            eq: 'y = 2x − 3',
+            color: '#3b82f6',
+            a: 2, b: -1, c: 3, // 2x - y = 3 -> y = 2x - 3
+            chips: ['b = −3 → Start at (0, −3)', 'm = +2 → Up 2, Right 1'],
+            onLine: (x, y) => y === 2 * x - 3,
+          },
+          l2: {
+            eq: 'y = −x + 3',
+            color: '#f97316',
+            a: 1, b: 1, c: 3, // x + y = 3 -> y = -x + 3
+            chips: ['b = +3 → Start at (0, 3)', 'm = −1 → Down 1, Right 1'],
+            onLine: (x, y) => y === -x + 3,
+          },
+          sol: { x: 2, y: 1 },
+          verifyText: 'Check (2, 1): y = 2(2) − 3 = 1 ✓ and y = −(2) + 3 = 1 ✓',
+        },
+        {
+          id: 'ps',
+          methodTag: 'Method B · Point-Slope (y − y₁ = m(x − x₁))',
+          title: 'Mission 2: Decode the Anchor & Sign-Flip!',
+          kind: 'system_eq',
+          l1: {
+            eq: 'y − 2 = ½(x − 1)',
+            color: '#3b82f6',
+            a: 1, b: -2, c: -3, // x - 2y = -3 -> 2(y-2) = x-1
+            chips: ['Anchor: (1, 2)', 'Slope m = ½ → Up 1, Right 2'],
+            onLine: (x, y) => 2 * (y - 2) === x - 1,
+          },
+          l2: {
+            eq: 'y + 1 = 2(x − 1)',
+            color: '#f97316',
+            a: 2, b: -1, c: 3, // 2x - y = 3 -> y+1 = 2(x-1)
+            chips: ['Watch +1! Anchor: (1, −1)', 'Slope m = 2 → Up 2, Right 1'],
+            onLine: (x, y) => y + 1 === 2 * (x - 1),
+          },
+          sol: { x: 3, y: 3 },
+          verifyText: 'Check (3, 3): 3 − 2 = ½(3 − 1) → 1 = 1 ✓ and 3 + 1 = 2(3 − 1) → 4 = 4 ✓',
+        },
+        {
+          id: 'std',
+          methodTag: 'Method C · Standard Form (Ax + By = C)',
+          title: 'Mission 3: Cover-Up Intercepts!',
+          kind: 'system_eq',
+          hasCoverUp: true,
+          l1: {
+            eq: '2x + 3y = 6',
+            color: '#3b82f6',
+            a: 2, b: 3, c: 6,
+            coverX: 'Cover x=0 → 3y = 6 → (0, 2)',
+            coverY: 'Cover y=0 → 2x = 6 → (3, 0)',
+            chips: ['Find y-int (x=0)', 'Find x-int (y=0)'],
+            onLine: (x, y) => 2 * x + 3 * y === 6,
+          },
+          l2: {
+            eq: 'x − y = 3',
+            color: '#f97316',
+            a: 1, b: -1, c: 3,
+            coverX: 'Cover x=0 → −y = 3 → (0, −3)',
+            coverY: 'Cover y=0 → x = 3 → (3, 0)',
+            chips: ['Watch the minus: −y = 3!', 'Cover y=0 → x = 3'],
+            onLine: (x, y) => x - y === 3,
+          },
+          sol: { x: 3, y: 0 },
+          verifyText: 'Check (3, 0): 2(3) + 3(0) = 6 ✓ and 3 − 0 = 3 ✓',
+        },
+        {
+          id: 'ineq',
+          methodTag: 'System of Inequalities (Slope-Int + Standard)',
+          title: 'Mission 4: Boundary, Shade & Safe Zone',
+          kind: 'system_ineq',
+          l1: {
+            eq: 'y > x − 1',
+            color: '#3b82f6',
+            a: -1, b: 1, c: -1, // -x + y > -1
+            wantDashed: true,
+            wantOp: '>',
+            testMsg: 'Test (0, 0): 0 > 0 − 1 → 0 > −1 is TRUE! Shade the side WITH (0, 0).',
+            chips: ['Boundary: y = x − 1', 'Strict > → Dashed!'],
+            onLine: (x, y) => y === x - 1,
+          },
+          l2: {
+            eq: 'x + y ≤ 3',
+            color: '#f97316',
+            a: 1, b: 1, c: 3,
+            wantDashed: false,
+            wantOp: '<=',
+            testMsg: 'Test (0, 0): 0 + 0 ≤ 3 is TRUE! Shade the side WITH (0, 0).',
+            chips: ['Intercepts: (0, 3) & (3, 0)', '≤ includes boundary → Solid!'],
+            onLine: (x, y) => x + y === 3,
+          },
+          checkPoint: (x, y) => ({
+            ok: y > x - 1 && x + y <= 3,
+            onDashed: y === x - 1,
+          }),
+        },
+      ];
+
+      let ch2Act1 = null;
+      function initCh2Act1(idx) {
+        const p = ch2Act1Puzzles[idx];
+        ch2Act1 = {
+          idx,
+          step: 'l1_pts', // l1_pts -> (l1_style -> l1_shade) -> l2_pts -> (l2_style -> l2_shade) -> pick_sol -> done
+          l1Pts: [],
+          l2Pts: [],
+          l1Dashed: null,
+          l1Shade: null,
+          l2Dashed: null,
+          l2Shade: null,
+          pickedSol: null,
+          coverMode: null,
+          msg: null,
+          warn: false,
+          solved: false,
+        };
+      }
+
+      function renderCh2Act1() {
+        const idx = state.idx2[1];
+        if (!ch2Act1 || ch2Act1.idx !== idx) initCh2Act1(idx);
+        const p = ch2Act1Puzzles[idx];
+        const s = ch2Act1;
+
+        const lines = [];
+        const shades = [];
+        const dots = [];
+        let overlapPoly = null;
+
+        if (s.l1Pts.length === 2) {
+          lines.push({ a: p.l1.a, b: p.l1.b, c: p.l1.c, color: p.l1.color, dashed: s.l1Dashed === true });
+        }
+        if (s.l2Pts.length === 2) {
+          lines.push({ a: p.l2.a, b: p.l2.b, c: p.l2.c, color: p.l2.color, dashed: s.l2Dashed === true });
+        }
+        if (p.kind === 'system_ineq') {
+          if (s.l1Shade) shades.push({ a: p.l1.a, b: p.l1.b, c: p.l1.c, op: s.l1Shade, color: p.l1.color });
+          if (s.l2Shade) shades.push({ a: p.l2.a, b: p.l2.b, c: p.l2.c, op: s.l2Shade, color: p.l2.color });
+          if (s.l1Shade && s.l2Shade) {
+            overlapPoly = clipHalfPlane(
+              clipHalfPlane(FULL_BOX, p.l1.a, p.l1.b, s.l1Shade, p.l1.c),
+              p.l2.a, p.l2.b, s.l2Shade, p.l2.c
+            );
+          }
+        }
+        s.l1Pts.forEach((pt) => dots.push({ x: pt.x, y: pt.y, color: p.l1.color, label: `(${pt.x},${pt.y})` }));
+        s.l2Pts.forEach((pt) => dots.push({ x: pt.x, y: pt.y, color: p.l2.color, label: `(${pt.x},${pt.y})` }));
+        if (s.pickedSol) {
+          dots.push({ x: s.pickedSol.x, y: s.pickedSol.y, color: '#22c55e', pulse: true, label: `(${s.pickedSol.x},${s.pickedSol.y})` });
+        }
+
+        const isInteractiveGrid = s.step === 'l1_pts' || s.step === 'l2_pts' || s.step === 'pick_sol';
+
+        let promptBanner = '';
+        if (s.step === 'l1_pts') {
+          promptBanner = `Step 1: Click <b>2 grid points</b> on <span class="font-mono text-blue-400">${p.l1.eq}</span> (${s.l1Pts.length}/2 placed)`;
+        } else if (s.step === 'l1_style') {
+          promptBanner = `Line 1 Boundary: Should <span class="font-mono text-blue-400">${p.l1.eq}</span> be <b>Solid</b> or <b>Dashed</b>?`;
+        } else if (s.step === 'l1_shade') {
+          promptBanner = `Line 1 Shading: ${p.l1.testMsg}`;
+        } else if (s.step === 'l2_pts') {
+          promptBanner = `Next: Click <b>2 grid points</b> on <span class="font-mono text-orange-400">${p.l2.eq}</span> (${s.l2Pts.length}/2 placed)`;
+        } else if (s.step === 'l2_style') {
+          promptBanner = `Line 2 Boundary: Should <span class="font-mono text-orange-400">${p.l2.eq}</span> be <b>Solid</b> or <b>Dashed</b>?`;
+        } else if (s.step === 'l2_shade') {
+          promptBanner = `Line 2 Shading: ${p.l2.testMsg}`;
+        } else if (s.step === 'pick_sol') {
+          promptBanner = p.kind === 'system_eq'
+            ? `🎯 Final Tap: Click the <b>intersection point</b> where Blue and Orange cross!`
+            : `🎯 Final Tap: Click <b>ANY grid point inside the Green Safe Zone</b> (remember dashed vs solid)!`;
+        } else {
+          promptBanner = `✅ Mission Complete!`;
+        }
+
+        const activeLine = s.step.startsWith('l1') ? p.l1 : p.l2;
+
+        stage.innerHTML = `
+          <div class="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-[var(--border)]">
+            <div class="flex items-center gap-1.5">
+              ${ch2Act1Puzzles.map((_, i) => `
+                <button data-c2p1="${i}" class="px-2.5 py-1 rounded-lg text-xs font-bold cursor-pointer border ${i === idx ? 'bg-[var(--primary)] text-[var(--primary-foreground)] border-[var(--primary)]' : state.cleared2[1][i] ? 'bg-emerald-500/15 text-emerald-500 border-emerald-500/40' : 'bg-[var(--background)] border-[var(--border)] text-[var(--muted-foreground)]'}">
+                  ${state.cleared2[1][i] ? '✓ ' : ''}M${i + 1}
+                </button>
+              `).join('')}
+            </div>
+            <span class="text-xs font-semibold text-[var(--primary)]">${p.methodTag}</span>
+          </div>
+
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <h2 class="text-base font-bold m-0">${p.title}</h2>
+            <button id="c2a1-reset" class="px-3 py-1 rounded-lg text-xs font-semibold border border-[var(--border)] bg-[var(--background)] cursor-pointer">↺ Reset Grid</button>
+          </div>
+
+          <!-- Split Layout: Left Equations + Visual Hints, Right Live Coordinate Grid -->
+          <div class="grid md:grid-cols-12 gap-4 items-start">
+            <div class="md:col-span-5 space-y-3">
+              <!-- Equation Cards -->
+              <div class="rounded-xl p-3 border-2 transition ${s.step.startsWith('l1') ? 'border-blue-500 bg-blue-500/10' : 'border-[var(--border)] bg-[var(--background)]'}">
+                <div class="flex items-center justify-between">
+                  <span class="text-xs font-bold uppercase text-blue-400">Equation 1 (Blue)</span>
+                  <span class="text-xs font-mono">${s.l1Pts.length === 2 ? '✓ Graphed' : `${s.l1Pts.length}/2 pts`}</span>
+                </div>
+                <div class="text-xl font-extrabold font-mono mt-1">${p.l1.eq}</div>
+                <div class="flex flex-wrap gap-1.5 mt-2">
+                  ${p.l1.chips.map((c) => `<span class="text-xs px-2 py-0.5 rounded-md bg-[var(--card)] border border-[var(--border)]">${c}</span>`).join('')}
+                </div>
+              </div>
+
+              <div class="rounded-xl p-3 border-2 transition ${s.step.startsWith('l2') ? 'border-orange-500 bg-orange-500/10' : 'border-[var(--border)] bg-[var(--background)]'}">
+                <div class="flex items-center justify-between">
+                  <span class="text-xs font-bold uppercase text-orange-400">Equation 2 (Orange)</span>
+                  <span class="text-xs font-mono">${s.l2Pts.length === 2 ? '✓ Graphed' : `${s.l2Pts.length}/2 pts`}</span>
+                </div>
+                <div class="text-xl font-extrabold font-mono mt-1">${p.l2.eq}</div>
+                <div class="flex flex-wrap gap-1.5 mt-2">
+                  ${p.l2.chips.map((c) => `<span class="text-xs px-2 py-0.5 rounded-md bg-[var(--card)] border border-[var(--border)]">${c}</span>`).join('')}
+                </div>
+              </div>
+
+              ${p.hasCoverUp && (s.step === 'l1_pts' || s.step === 'l2_pts') ? `
+                <div class="rounded-xl p-3 border border-[var(--border)] bg-[var(--background)] space-y-2">
+                  <div class="text-xs font-bold text-[var(--muted-foreground)]">🙈 Cover-Up Finger Tool:</div>
+                  <div class="flex gap-2">
+                    <button id="cov-x" class="flex-1 px-2.5 py-1.5 rounded-lg text-xs font-bold border border-[var(--border)] cursor-pointer ${s.coverMode === 'x' ? 'bg-[var(--primary)] text-[var(--primary-foreground)]' : 'bg-[var(--card)]'}">Cover x = 0</button>
+                    <button id="cov-y" class="flex-1 px-2.5 py-1.5 rounded-lg text-xs font-bold border border-[var(--border)] cursor-pointer ${s.coverMode === 'y' ? 'bg-[var(--primary)] text-[var(--primary-foreground)]' : 'bg-[var(--card)]'}">Cover y = 0</button>
+                  </div>
+                  ${s.coverMode ? `<div class="text-xs font-mono font-bold text-emerald-400">${s.coverMode === 'x' ? activeLine.coverX : activeLine.coverY}</div>` : ''}
+                </div>
+              ` : ''}
+
+              <!-- Active Instruction Box -->
+              <div class="rounded-xl p-3 border border-[var(--primary)]/40 bg-[var(--primary)]/10 text-xs leading-relaxed">
+                ${promptBanner}
+              </div>
+
+              <!-- Inequality Style / Shade Buttons -->
+              ${s.step === 'l1_style' || s.step === 'l2_style' ? `
+                <div class="grid grid-cols-2 gap-2 anim-in">
+                  <button data-style="solid" class="px-3 py-2.5 rounded-xl text-xs font-bold border-2 border-[var(--border)] bg-[var(--background)] hover:border-[var(--primary)] cursor-pointer">
+                    ━━ Solid (≤ or ≥)
+                  </button>
+                  <button data-style="dashed" class="px-3 py-2.5 rounded-xl text-xs font-bold border-2 border-[var(--border)] bg-[var(--background)] hover:border-[var(--primary)] cursor-pointer">
+                    ╌╌ Dashed (&lt; or &gt;)
+                  </button>
+                </div>
+              ` : ''}
+
+              ${s.step === 'l1_shade' || s.step === 'l2_shade' ? `
+                <div class="grid grid-cols-2 gap-2 anim-in">
+                  <button data-shade=">" class="px-3 py-2.5 rounded-xl text-xs font-bold border-2 border-[var(--border)] bg-[var(--background)] hover:border-[var(--primary)] cursor-pointer">
+                    ⬆️ Shade ABOVE
+                  </button>
+                  <button data-shade="<" class="px-3 py-2.5 rounded-xl text-xs font-bold border-2 border-[var(--border)] bg-[var(--background)] hover:border-[var(--primary)] cursor-pointer">
+                    ⬇️ Shade BELOW
+                  </button>
+                </div>
+              ` : ''}
+
+              ${s.msg ? `
+                <div class="anim-in rounded-xl p-3 border text-xs font-semibold space-y-2 ${s.solved ? 'bg-emerald-500/15 border-emerald-500/50 text-emerald-400' : s.warn ? 'bg-rose-500/15 border-rose-500/50 text-rose-400' : 'bg-blue-500/15 border-blue-500/50 text-blue-400'}">
+                  <div>${s.msg}</div>
+                  ${s.solved && idx < ch2Act1Puzzles.length - 1 ? `<button id="c2a1-next" class="px-3 py-1.5 rounded-lg bg-emerald-500 text-white font-bold text-xs cursor-pointer">Next Mission →</button>` : ''}
+                </div>
+              ` : ''}
+            </div>
+
+            <div class="md:col-span-7">
+              ${buildCoordSvg({
+                lines,
+                shades,
+                overlapPoly,
+                dots,
+                interactive: isInteractiveGrid,
+                testDot: p.kind === 'system_ineq' ? { x: 0, y: 0 } : null,
+              })}
+              <div class="text-center text-xs text-[var(--muted-foreground)] mt-1.5">
+                ${isInteractiveGrid ? 'Tap integer intersections on the grid (−6 to +6)' : 'Use the buttons on the left to set boundary & shading'}
+              </div>
+            </div>
+          </div>
+        `;
+
+        stage.querySelectorAll('[data-c2p1]').forEach((b) => {
+          b.addEventListener('click', () => {
+            state.idx2[1] = Number(b.dataset.c2p1);
+            initCh2Act1(state.idx2[1]);
+            renderCh2Act1();
+          });
+        });
+        document.getElementById('c2a1-reset').addEventListener('click', () => {
+          initCh2Act1(idx);
+          beep(300, 0.05);
+          renderCh2Act1();
+        });
+        const covX = document.getElementById('cov-x');
+        const covY = document.getElementById('cov-y');
+        if (covX) covX.addEventListener('click', () => { s.coverMode = 'x'; beep(440, 0.05); renderCh2Act1(); });
+        if (covY) covY.addEventListener('click', () => { s.coverMode = 'y'; beep(440, 0.05); renderCh2Act1(); });
+
+        stage.querySelectorAll('.grid-hit').forEach((circle) => {
+          circle.addEventListener('click', () => {
+            const gx = Number(circle.dataset.gx);
+            const gy = Number(circle.dataset.gy);
+            if (s.step === 'l1_pts') {
+              if (s.l1Pts.some((pt) => pt.x === gx && pt.y === gy)) return;
+              if (p.l1.onLine(gx, gy)) {
+                s.l1Pts.push({ x: gx, y: gy });
+                s.warn = false;
+                sfxGood();
+                if (s.l1Pts.length === 2) {
+                  s.msg = `Blue line slung!`;
+                  s.coverMode = null;
+                  s.step = p.kind === 'system_ineq' ? 'l1_style' : 'l2_pts';
+                } else {
+                  s.msg = `Nice! (${gx}, ${gy}) is on Line 1. Tap 1 more point.`;
+                }
+              } else {
+                sfxWarn();
+                breakStreak();
+                s.warn = true;
+                s.msg = `(${gx}, ${gy}) is NOT on ${p.l1.eq}. Check the chips on the left!`;
+              }
+              renderCh2Act1();
+            } else if (s.step === 'l2_pts') {
+              if (s.l2Pts.some((pt) => pt.x === gx && pt.y === gy)) return;
+              if (p.l2.onLine(gx, gy)) {
+                s.l2Pts.push({ x: gx, y: gy });
+                s.warn = false;
+                sfxGood();
+                if (s.l2Pts.length === 2) {
+                  s.msg = `Orange line slung!`;
+                  s.coverMode = null;
+                  s.step = p.kind === 'system_ineq' ? 'l2_style' : 'pick_sol';
+                } else {
+                  s.msg = `Great! (${gx}, ${gy}) is on Line 2. Tap 1 more point.`;
+                }
+              } else {
+                sfxWarn();
+                breakStreak();
+                s.warn = true;
+                s.msg = `(${gx}, ${gy}) is NOT on ${p.l2.eq}. Check the chips on the left!`;
+              }
+              renderCh2Act1();
+            } else if (s.step === 'pick_sol') {
+              if (p.kind === 'system_eq') {
+                if (gx === p.sol.x && gy === p.sol.y) {
+                  s.pickedSol = { x: gx, y: gy };
+                  s.solved = true;
+                  s.step = 'done';
+                  s.warn = false;
+                  s.msg = `🎯 BULLSEYE! (${gx}, ${gy}) solves BOTH equations! ${p.verifyText} (+30 XP)`;
+                  sfxWin();
+                  addXP(30);
+                  markCleared2(1, idx);
+                } else {
+                  sfxWarn();
+                  breakStreak();
+                  s.warn = true;
+                  s.msg = `(${gx}, ${gy}) isn't where the Blue and Orange lines cross!`;
+                }
+              } else {
+                const res = p.checkPoint(gx, gy);
+                if (res.ok) {
+                  s.pickedSol = { x: gx, y: gy };
+                  s.solved = true;
+                  s.step = 'done';
+                  s.warn = false;
+                  s.msg = `🛡️ SAFE ZONE! (${gx}, ${gy}) satisfies BOTH ${p.l1.eq} and ${p.l2.eq}! (+35 XP)`;
+                  sfxWin();
+                  addXP(35);
+                  markCleared2(1, idx);
+                } else if (res.onDashed) {
+                  sfxWarn();
+                  breakStreak();
+                  s.warn = true;
+                  s.msg = `⚠️ Trap! (${gx}, ${gy}) is right on the DASHED blue line — strict > excludes the boundary!`;
+                } else {
+                  sfxWarn();
+                  breakStreak();
+                  s.warn = true;
+                  s.msg = `(${gx}, ${gy}) is outside the Green double-shaded zone. Test it in both inequalities!`;
+                }
+              }
+              renderCh2Act1();
+            }
+          });
+        });
+
+        stage.querySelectorAll('[data-style]').forEach((b) => {
+          b.addEventListener('click', () => {
+            const isDashed = b.dataset.style === 'dashed';
+            const line = s.step === 'l1_style' ? p.l1 : p.l2;
+            if (isDashed === line.wantDashed) {
+              if (s.step === 'l1_style') { s.l1Dashed = isDashed; s.step = 'l1_shade'; }
+              else { s.l2Dashed = isDashed; s.step = 'l2_shade'; }
+              s.warn = false;
+              s.msg = `Correct! ${isDashed ? 'Strict < or > uses a DASHED line.' : '≤ or ≥ includes the line, so SOLID.'}`;
+              sfxGood();
+            } else {
+              sfxWarn();
+              breakStreak();
+              s.warn = true;
+              s.msg = `Check the symbol in ${line.eq}: ${line.wantDashed ? 'strict > / < means DASHED (points on line don’t count).' : '≤ / ≥ has the equals bar, so SOLID!'}`;
+            }
+            renderCh2Act1();
+          });
+        });
+
+        stage.querySelectorAll('[data-shade]').forEach((b) => {
+          b.addEventListener('click', () => {
+            const dir = b.dataset.shade; // '>' = above (y bigger), '<' = below (y smaller)
+            const isL1 = s.step === 'l1_shade';
+            const line = isL1 ? p.l1 : p.l2;
+            // For l1 (y > x - 1 -> -x + y > -1): above means '>'
+            // For l2 (x + y <= 3 -> x + y <= 3): below means '<='
+            const wantDir = line.wantOp === '>' || line.wantOp === '>=' ? '>' : '<';
+            if (dir === wantDir) {
+              if (isL1) { s.l1Shade = line.wantOp; s.step = 'l2_pts'; }
+              else { s.l2Shade = line.wantOp; s.step = 'pick_sol'; }
+              s.warn = false;
+              s.msg = `Shaded! ${isL1 ? 'Now graph the Orange inequality!' : 'Look at the Green overlap zone — click a solution point inside it!'}`;
+              sfxGood();
+            } else {
+              sfxWarn();
+              breakStreak();
+              s.warn = true;
+              s.msg = `Test (0, 0) in ${line.eq}: (0, 0) makes it TRUE, so shade the side containing (0, 0)!`;
+            }
+            renderCh2Act1();
+          });
+        });
+
+        const nxt = document.getElementById('c2a1-next');
+        if (nxt) nxt.addEventListener('click', () => {
+          state.idx2[1] = idx + 1;
+          initCh2Act1(state.idx2[1]);
+          renderCh2Act1();
+        });
+      }
+
+      // ---------- Chapter 2 Act 2: Graph Bug Hunter (Critical Thinking) ----------
+      const ch2Act2Puzzles = [
+        {
+          title: 'Bug #1: Point-Slope Sign Flip',
+          given: 'y + 2 = 3(x − 1)',
+          claim: 'Villain plotted the anchor at (1, +2) and slope 3.',
+          graph: {
+            lines: [
+              { a: 3, b: -1, c: 1, color: '#ef4444' }, // wrong line through (1, 2) slope 3 -> y-2=3(x-1) -> 3x-y=1
+              { a: 3, b: -1, c: 5, color: '#22c55e', dashed: true }, // right line 3x-y=5
+            ],
+            dots: [
+              { x: 1, y: 2, color: '#ef4444', label: 'Plotted (1,2)' },
+              { x: 1, y: -2, color: '#22c55e', label: 'True (1,-2)' },
+            ],
+          },
+          choices: [
+            { text: 'y + 2 means y − (−2), so the anchor y-value is −2, giving (1, −2) not (1, +2)!', ok: true },
+            { text: 'The slope should be −3 instead of +3.', ok: false },
+            { text: 'Point-slope form always starts at the y-intercept (0, 2).', ok: false },
+          ],
+          fixText: 'Plug (1, 2) in to check: 2 + 2 = 4 ≠ 3(1 − 1) = 0! Plugging (1, −2) gives −2 + 2 = 0 ✓.',
+        },
+        {
+          title: 'Bug #2: Cover-Up Minus Sign Drop',
+          given: '2x − 3y = 6',
+          claim: 'Villain covered 2x and got 3y = 6 → plotted y-intercept (0, +2).',
+          graph: {
+            lines: [
+              { a: 2, b: 3, c: 6, color: '#ef4444' }, // wrong intercepts (3,0) and (0,2)
+              { a: 2, b: -3, c: 6, color: '#22c55e', dashed: true },
+            ],
+            dots: [
+              { x: 3, y: 0, color: '#3b82f6', label: '(3,0) OK' },
+              { x: 0, y: 2, color: '#ef4444', label: 'Wrong (0,2)' },
+              { x: 0, y: -2, color: '#22c55e', label: 'True (0,-2)' },
+            ],
+          },
+          choices: [
+            { text: 'Dropped the minus in front of 3y: covering 2x leaves −3y = 6, so y = −2 → (0, −2)!', ok: true },
+            { text: 'Covering x = 0 should give 2y = 6, so y = 3.', ok: false },
+            { text: 'Standard form cannot be graphed using intercepts.', ok: false },
+          ],
+          fixText: 'Always keep the sign attached to the term! Check (0, −2): 2(0) − 3(−2) = +6 ✓.',
+        },
+        {
+          title: 'Bug #3: The Solid Boundary Trap',
+          given: 'y < 2x + 1',
+          claim: 'Villain drew a SOLID line and claimed (0, 1) is a solution.',
+          graph: {
+            lines: [{ a: 2, b: -1, c: -1, color: '#ef4444', dashed: false }],
+            shades: [{ a: 2, b: -1, c: -1, op: '>=', color: '#ef4444' }], // 2x - y >= -1 -> y <= 2x + 1
+            dots: [{ x: 0, y: 1, color: '#ef4444', pulse: true, label: 'Claimed (0,1)' }],
+          },
+          choices: [
+            { text: 'Strict < needs a DASHED line! At (0, 1), 1 < 1 is FALSE, so boundary points are NOT solutions.', ok: true },
+            { text: 'y < 2x + 1 should be shaded ABOVE the line instead of below.', ok: false },
+            { text: 'The y-intercept of y < 2x + 1 is (1, 0), not (0, 1).', ok: false },
+          ],
+          fixText: 'Remember: < or > = DASHED (hollow boundary). ≤ or ≥ = SOLID (included).',
+        },
+        {
+          title: 'Bug #4: Forgot to Flip When Dividing by Negative',
+          given: 'x − 2y ≤ 4',
+          claim: 'Villain converted: −2y ≤ −x + 4 → y ≤ ½x − 2 and shaded BELOW (Red).',
+          graph: {
+            lines: [{ a: 1, b: -2, c: 4, color: '#f97316' }],
+            shades: [
+              { a: 1, b: -2, c: 4, op: '>=', color: '#ef4444' }, // y <= 0.5x - 2
+              { a: 1, b: -2, c: 4, op: '<=', color: '#22c55e' }, // true: x - 2y <= 4 -> y >= 0.5x - 2
+            ],
+            dots: [{ x: 0, y: 0, color: '#22c55e', label: '(0,0) TRUE!' }],
+          },
+          choices: [
+            { text: 'Dividing by −2 MUST flip ≤ to ≥! True region is y ≥ ½x − 2 (ABOVE, containing (0, 0)).', ok: true },
+            { text: 'Dividing by −2 turns ½x into −½x only.', ok: false },
+            { text: '(0, 0) fails x − 2y ≤ 4 because 0 ≤ 4 is false.', ok: false },
+          ],
+          fixText: 'Quick safety check: test (0, 0) in original x − 2y ≤ 4 → 0 ≤ 4 (TRUE!), so (0, 0) MUST be shaded!',
+        },
+      ];
+
+      let ch2Act2 = null;
+      function initCh2Act2(idx) {
+        ch2Act2 = { idx, picked: null, solved: false, msg: null };
+      }
+
+      function renderCh2Act2() {
+        const idx = state.idx2[2];
+        if (!ch2Act2 || ch2Act2.idx !== idx) initCh2Act2(idx);
+        const p = ch2Act2Puzzles[idx];
+        const s = ch2Act2;
+
+        stage.innerHTML = `
+          <div class="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-[var(--border)]">
+            <div class="flex items-center gap-1.5">
+              ${ch2Act2Puzzles.map((_, i) => `
+                <button data-c2p2="${i}" class="px-2.5 py-1 rounded-lg text-xs font-bold cursor-pointer border ${i === idx ? 'bg-[var(--primary)] text-[var(--primary-foreground)] border-[var(--primary)]' : state.cleared2[2][i] ? 'bg-emerald-500/15 text-emerald-500 border-emerald-500/40' : 'bg-[var(--background)] border-[var(--border)] text-[var(--muted-foreground)]'}">
+                  ${state.cleared2[2][i] ? '✓ ' : ''}B${i + 1}
+                </button>
+              `).join('')}
+            </div>
+            <span class="text-xs font-semibold text-[var(--warning)]">Critical Thinking · Spot the Graph Bug</span>
+          </div>
+
+          <div class="grid md:grid-cols-12 gap-4 items-start">
+            <div class="md:col-span-6 space-y-3">
+              <div>
+                <h2 class="text-base font-bold m-0">${p.title}</h2>
+                <div class="mt-2 rounded-xl bg-[var(--background)] border border-[var(--border)] p-3">
+                  <div class="text-xs text-[var(--muted-foreground)] uppercase font-bold">Target Problem</div>
+                  <div class="text-xl font-extrabold font-mono mt-0.5">${p.given}</div>
+                  <div class="text-xs text-rose-400 font-semibold mt-1">❌ ${p.claim}</div>
+                </div>
+              </div>
+
+              <div class="space-y-2">
+                <div class="text-xs font-bold text-[var(--muted-foreground)] uppercase">What went wrong on the graph?</div>
+                ${p.choices.map((ch, ci) => {
+                  const chosen = s.picked === ci;
+                  const cls = s.solved && ch.ok
+                    ? 'border-emerald-500 bg-emerald-500/15 text-emerald-400'
+                    : chosen && !ch.ok
+                    ? 'border-rose-500 bg-rose-500/15 text-rose-400'
+                    : 'border-[var(--border)] bg-[var(--background)] hover:border-[var(--primary)]';
+                  return `
+                    <button data-c2c2="${ci}" ${s.solved ? 'disabled' : ''} class="w-full text-left px-3.5 py-2.5 rounded-xl border-2 text-xs font-semibold transition cursor-pointer ${cls}">
+                      ${ch.text}
+                    </button>
+                  `;
+                }).join('')}
+              </div>
+
+              ${s.msg ? `
+                <div class="anim-in rounded-xl p-3 border text-xs font-semibold space-y-1.5 ${s.solved ? 'bg-emerald-500/15 border-emerald-500/50 text-emerald-400' : 'bg-amber-500/15 border-amber-500/50 text-amber-400'}">
+                  <div>${s.msg}</div>
+                  ${s.solved ? `<div class="text-[var(--foreground)] font-normal">${p.fixText}</div>` : ''}
+                  ${s.solved && idx < ch2Act2Puzzles.length - 1 ? `<button id="c2a2-next" class="mt-1 px-3 py-1.5 rounded-lg bg-emerald-500 text-white font-bold text-xs cursor-pointer">Next Bug →</button>` : ''}
+                </div>
+              ` : ''}
+            </div>
+
+            <div class="md:col-span-6">
+              ${buildCoordSvg(p.graph)}
+              <div class="text-center text-xs text-[var(--muted-foreground)] mt-1.5">Red = villain’s buggy graph · Green dashed = true fix</div>
+            </div>
+          </div>
+        `;
+
+        stage.querySelectorAll('[data-c2p2]').forEach((b) => {
+          b.addEventListener('click', () => {
+            state.idx2[2] = Number(b.dataset.c2p2);
+            initCh2Act2(state.idx2[2]);
+            renderCh2Act2();
+          });
+        });
+
+        stage.querySelectorAll('[data-c2c2]').forEach((b) => {
+          b.addEventListener('click', () => {
+            const ci = Number(b.dataset.c2c2);
+            s.picked = ci;
+            if (p.choices[ci].ok) {
+              s.solved = true;
+              s.msg = '🕷️ Bug Crushed! (+30 XP)';
+              sfxWin();
+              addXP(30);
+              markCleared2(2, idx);
+            } else {
+              sfxWarn();
+              breakStreak();
+              s.msg = 'Look closely at the Red vs Green markers on the graph and re-check the signs!';
+            }
+            renderCh2Act2();
+          });
+        });
+
+        const nxt = document.getElementById('c2a2-next');
+        if (nxt) nxt.addEventListener('click', () => {
+          state.idx2[2] = idx + 1;
+          initCh2Act2(state.idx2[2]);
+          renderCh2Act2();
+        });
+      }
+
+      // ---------- Chapter 2 Act 3: Second-Order Graphing Lab ----------
+      const ch2Act3Puzzles = [
+        {
+          title: 'Lab 1: When Does the Intersection Vanish?',
+          prompt: 'Blue is y = 2x − 1. Orange is y = mx + 3. Slide m toward 2 — what happens to the green crossing point, and when does the system have NO SOLUTION?',
+          slider: { label: 'Orange slope m', min: -1, max: 4, step: 0.5, init: 0.5, target: 2 },
+          choices: [
+            { text: 'At m = 2: slopes match (parallel) with different y-intercepts, so they NEVER cross (0 solutions).', ok: true },
+            { text: 'At m = 0: a horizontal line never crosses a diagonal line.', ok: false },
+            { text: 'At m = −1: opposite slopes always mean no solution.', ok: false },
+          ],
+          explain: 'Second-order insight: Same slope (m = 2) + different y-intercept (−1 ≠ 3) = parallel lines = 0 solutions. As m approaches 2, the crossing point shoots farther away!',
+          renderViz: (m) => {
+            const lines = [
+              { a: 2, b: -1, c: 1, color: '#3b82f6' }, // y = 2x - 1
+              { a: m, b: -1, c: -3, color: '#f97316' }, // y = mx + 3
+            ];
+            const dots = [];
+            let status = '';
+            if (Math.abs(m - 2) < 1e-6) {
+              status = '🚫 PARALLEL! No intersection anywhere (0 solutions)';
+            } else {
+              const ix = 4 / (2 - m);
+              const iy = 2 * ix - 1;
+              status = `Crosses at (${ix.toFixed(1)}, ${iy.toFixed(1)})`;
+              if (ix >= -6 && ix <= 6 && iy >= -6 && iy <= 6) {
+                dots.push({ x: ix, y: iy, color: '#22c55e', pulse: true, label: `(${ix.toFixed(1)},${iy.toFixed(1)})` });
+              } else {
+                status += ' (shot off the grid!)';
+              }
+            }
+            return {
+              svg: buildCoordSvg({ lines, dots, sizeClass: 'w-full max-w-sm mx-auto block' }),
+              readout: `<div class="font-mono text-sm font-bold">${status}</div><div class="text-xs text-[var(--muted-foreground)] mt-1">Blue: y = 2x − 1 · Orange: y = ${m}x + 3</div>`,
+            };
+          },
+        },
+        {
+          title: 'Lab 2: Standard Form Coefficient Pivot',
+          prompt: 'Orange is 2x + By = 12, paired with Blue y = 2. Slide B from 3 to 6 (doubling B). What stays LOCKED, and what happens to the intersection?',
+          slider: { label: 'Coefficient B', min: 1, max: 6, step: 1, init: 3, target: 6 },
+          choices: [
+            { text: 'x-intercept (6, 0) stays PINNED; y-intercept cuts in half (0,4)→(0,2) and intersection moves left to (0, 2)!', ok: true },
+            { text: 'Both intercepts cut in half, so the line shifts down evenly.', ok: false },
+            { text: 'The y-intercept stays locked while the x-intercept doubles.', ok: false },
+          ],
+          explain: 'Second-order insight: When y = 0, By disappears completely! So 2x = 12 → (6, 0) is immune to B. Changing B only scales the y-intercept (12/B), pivoting the line around (6, 0)!',
+          renderViz: (B) => {
+            const yInt = 12 / B;
+            const ix = (12 - 2 * B) / 2; // 2x + B(2) = 12 -> x = 6 - B
+            const lines = [
+              { a: 0, b: 1, c: 2, color: '#3b82f6' }, // y = 2
+              { a: 2, b: B, c: 12, color: '#f97316' }, // 2x + By = 12
+            ];
+            const dots = [
+              { x: 6, y: 0, color: '#f97316', label: '(6,0) PINNED' },
+              { x: ix, y: 2, color: '#22c55e', pulse: true, label: `(${ix},2)` },
+            ];
+            if (yInt <= 6) dots.push({ x: 0, y: yInt, color: '#f97316', label: `(0,${Number.isInteger(yInt) ? yInt : yInt.toFixed(1)})` });
+            return {
+              svg: buildCoordSvg({ lines, dots, sizeClass: 'w-full max-w-sm mx-auto block' }),
+              readout: `<div class="font-mono text-sm font-bold">2x + ${B}y = 12 ∩ y = 2 → (${ix}, 2)</div><div class="text-xs text-[var(--muted-foreground)] mt-1">x-int: (6, 0) · y-int: (0, ${Number.isInteger(yInt) ? yInt : yInt.toFixed(1)})</div>`,
+            };
+          },
+        },
+        {
+          title: 'Lab 3: Vanishing Inequality Safe Zone',
+          prompt: 'Blue is y ≥ x + 1 (solid). Orange is y < x + k (dashed). Slide k down — for which values of k does the Green overlap vanish completely (NO solution)?',
+          slider: { label: 'Orange shift k', min: -2, max: 5, step: 1, init: 4, target: 1 },
+          choices: [
+            { text: 'k ≤ 1 (at k = 1, y ≥ x + 1 and y < x + 1 share ZERO points because < is strict!)', ok: true },
+            { text: 'Only when k < 1 (at k = 1 they share the line y = x + 1).', ok: false },
+            { text: 'Never — two inequalities always overlap somewhere.', ok: false },
+          ],
+          explain: 'Second-order edge case: A number cannot be BOTH ≥ x + 1 AND strictly < x + 1! So at k = 1 the solid and dashed lines sit on top of each other with ZERO shared points.',
+          renderViz: (k) => {
+            const lines = [
+              { a: -1, b: 1, c: 1, color: '#3b82f6', dashed: false },
+              { a: -1, b: 1, c: k, color: '#f97316', dashed: true },
+            ];
+            const shades = [
+              { a: -1, b: 1, c: 1, op: '>=', color: '#3b82f6' },
+              { a: -1, b: 1, c: k, op: '<', color: '#f97316' },
+            ];
+            let overlapPoly = null;
+            if (k > 1) {
+              overlapPoly = clipHalfPlane(clipHalfPlane(FULL_BOX, -1, 1, '>=', 1), -1, 1, '<', k);
+            }
+            return {
+              svg: buildCoordSvg({ lines, shades, overlapPoly, sizeClass: 'w-full max-w-sm mx-auto block' }),
+              readout: `<div class="font-mono text-sm font-bold ${k <= 1 ? 'text-rose-400' : 'text-emerald-400'}">${k <= 1 ? '🚫 EMPTY! 0 Solutions' : `✅ Green Strip Width = ${k - 1}`}</div><div class="text-xs text-[var(--muted-foreground)] mt-1">Blue: y ≥ x + 1 · Orange: y &lt; x + ${k}</div>`,
+            };
+          },
+        },
+        {
+          title: 'Lab 4: Budget Tightening & Viable Bundles',
+          prompt: 'Gadget packs: x + y ≤ 5 (max 5 items) & 3x + y ≤ B (budget $B). Slide B from $13 down to $11 — what happens to bundles (3, 2) and (3, 3)?',
+          slider: { label: 'Budget B ($)', min: 7, max: 13, step: 1, init: 13, target: 11 },
+          choices: [
+            { text: 'At B = $11, (3, 3) is knocked OUT ($12 > $11), while (3, 2) sits right on the solid boundary ($11 ≤ $11, STILL VALID!).', ok: true },
+            { text: 'Both (3, 2) and (3, 3) are knocked out because they sit on a boundary.', ok: false },
+            { text: 'Neither changes because x + y ≤ 5 is the tighter rule.', ok: false },
+          ],
+          explain: 'Second-order constraint reasoning (A-CED.A.3): Tightening B pulls the orange budget line inward. At B = 11, 3(3) + 2 = 11 (≤ 11 TRUE), while 3(3) + 3 = 12 (FALSE)!',
+          renderViz: (B) => {
+            const lines = [
+              { a: 1, b: 1, c: 5, color: '#3b82f6' },
+              { a: 3, b: 1, c: B, color: '#f97316' },
+            ];
+            const shades = [
+              { a: 1, b: 1, c: 5, op: '<=', color: '#3b82f6' },
+              { a: 3, b: 1, c: B, op: '<=', color: '#f97316' },
+            ];
+            let poly = clipHalfPlane(FULL_BOX, 1, 0, '>=', 0);
+            poly = clipHalfPlane(poly, 0, 1, '>=', 0);
+            poly = clipHalfPlane(poly, 1, 1, '<=', 5);
+            poly = clipHalfPlane(poly, 3, 1, '<=', B);
+            const ok32 = 3 + 2 <= 5 && 9 + 2 <= B;
+            const ok33 = 3 + 3 <= 5 && 9 + 3 <= B; // note 3+3=6 > 5 too! Wait: let's test (2, 3) vs (3, 2) or max 6 items!
+            const dots = [
+              { x: 3, y: 2, color: ok32 ? '#22c55e' : '#ef4444', label: `(3,2) $${9 + 2}` },
+              { x: 3, y: 3, color: ok33 ? '#22c55e' : '#ef4444', label: `(3,3) $${9 + 3}` },
+            ];
+            return {
+              svg: buildCoordSvg({ lines, shades, overlapPoly: poly, dots, sizeClass: 'w-full max-w-sm mx-auto block' }),
+              readout: `<div class="font-mono text-sm font-bold">Budget = $${B}: (3,2) is ${ok32 ? '✅ IN' : '❌ OUT'} · (3,3) is ${ok33 ? '✅ IN' : '❌ OUT'}</div><div class="text-xs text-[var(--muted-foreground)] mt-1">Blue: x + y ≤ 5 · Orange: 3x + y ≤ ${B} (x,y ≥ 0)</div>`,
+            };
+          },
+        },
+      ];
+
+      // Note on Lab 4: (3,3) has 3+3=6 > 5! Let's fix Lab 4 constraint to x + y <= 6 so (3,3) IS valid at B=$13 and knocked out ONLY by the budget drop to $11!
+      ch2Act3Puzzles[3].prompt = 'Gadget packs: x + y ≤ 6 (max 6 items) & 3x + y ≤ B (budget $B). Slide B from $13 down to $11 — what happens to (3, 2) and (3, 3)?';
+      ch2Act3Puzzles[3].renderViz = (B) => {
+        const lines = [
+          { a: 1, b: 1, c: 6, color: '#3b82f6' },
+          { a: 3, b: 1, c: B, color: '#f97316' },
+        ];
+        const shades = [
+          { a: 1, b: 1, c: 6, op: '<=', color: '#3b82f6' },
+          { a: 3, b: 1, c: B, op: '<=', color: '#f97316' },
+        ];
+        let poly = clipHalfPlane(FULL_BOX, 1, 0, '>=', 0);
+        poly = clipHalfPlane(poly, 0, 1, '>=', 0);
+        poly = clipHalfPlane(poly, 1, 1, '<=', 6);
+        poly = clipHalfPlane(poly, 3, 1, '<=', B);
+        const ok32 = 3 + 2 <= 6 && 9 + 2 <= B;
+        const ok33 = 3 + 3 <= 6 && 9 + 3 <= B;
+        const dots = [
+          { x: 3, y: 2, color: ok32 ? '#22c55e' : '#ef4444', label: `(3,2) $${9 + 2}` },
+          { x: 3, y: 3, color: ok33 ? '#22c55e' : '#ef4444', label: `(3,3) $${9 + 3}` },
+        ];
+        return {
+          svg: buildCoordSvg({ lines, shades, overlapPoly: poly, dots, sizeClass: 'w-full max-w-sm mx-auto block' }),
+          readout: `<div class="font-mono text-sm font-bold">Budget = $${B}: (3,2) is ${ok32 ? '✅ IN' : '❌ OUT'} · (3,3) is ${ok33 ? '✅ IN' : '❌ OUT'}</div><div class="text-xs text-[var(--muted-foreground)] mt-1">Blue: x + y ≤ 6 · Orange: 3x + y ≤ ${B} (x,y ≥ 0)</div>`,
+        };
+      };
+
+      let ch2Act3 = null;
+      function initCh2Act3(idx) {
+        const p = ch2Act3Puzzles[idx];
+        ch2Act3 = { idx, val: p.slider.init, picked: null, solved: false, msg: null };
+      }
+
+      function renderCh2Act3() {
+        const idx = state.idx2[3];
+        if (!ch2Act3 || ch2Act3.idx !== idx) initCh2Act3(idx);
+        const p = ch2Act3Puzzles[idx];
+        const s = ch2Act3;
+        const vz = p.renderViz(s.val);
+
+        stage.innerHTML = `
+          <div class="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-[var(--border)]">
+            <div class="flex items-center gap-1.5">
+              ${ch2Act3Puzzles.map((_, i) => `
+                <button data-c2p3="${i}" class="px-2.5 py-1 rounded-lg text-xs font-bold cursor-pointer border ${i === idx ? 'bg-[var(--primary)] text-[var(--primary-foreground)] border-[var(--primary)]' : state.cleared2[3][i] ? 'bg-emerald-500/15 text-emerald-500 border-emerald-500/40' : 'bg-[var(--background)] border-[var(--border)] text-[var(--muted-foreground)]'}">
+                  ${state.cleared2[3][i] ? '✓ ' : ''}L${i + 1}
+                </button>
+              `).join('')}
+            </div>
+            <span class="text-xs font-semibold text-[var(--success)]">Second-Order Graph Lab</span>
+          </div>
+
+          <div class="grid md:grid-cols-12 gap-4 items-start">
+            <div class="md:col-span-6 space-y-3">
+              <div>
+                <h2 class="text-base font-bold m-0">${p.title}</h2>
+                <p class="text-sm font-medium mt-1 mb-0">${p.prompt}</p>
+              </div>
+
+              <div class="rounded-xl bg-[var(--background)] border border-[var(--border)] p-3 space-y-2">
+                <div class="flex items-center justify-between gap-2">
+                  <label class="text-xs font-bold flex items-center gap-2">
+                    <span>🔬 ${p.slider.label}:</span>
+                    <span id="c2a3-val" class="px-2 py-0.5 rounded bg-[var(--card)] border border-[var(--border)] font-mono">${s.val}</span>
+                  </label>
+                  <button id="c2a3-snap" class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-[var(--secondary)] text-[var(--secondary-foreground)] border border-[var(--border)] cursor-pointer">Jump to ${p.slider.target}</button>
+                </div>
+                <input id="c2a3-slider" type="range" min="${p.slider.min}" max="${p.slider.max}" step="${p.slider.step}" value="${s.val}" class="w-full accent-[var(--primary)] cursor-pointer" />
+                <div id="c2a3-readout">${vz.readout}</div>
+              </div>
+
+              <div class="space-y-2">
+                <div class="text-xs font-bold text-[var(--muted-foreground)] uppercase">Lock in your second-order conclusion:</div>
+                ${p.choices.map((ch, ci) => {
+                  const chosen = s.picked === ci;
+                  const cls = s.solved && ch.ok
+                    ? 'border-emerald-500 bg-emerald-500/15 text-emerald-400'
+                    : chosen && !ch.ok
+                    ? 'border-rose-500 bg-rose-500/15 text-rose-400'
+                    : 'border-[var(--border)] bg-[var(--background)] hover:border-[var(--primary)]';
+                  return `
+                    <button data-c2c3="${ci}" ${s.solved ? 'disabled' : ''} class="w-full text-left px-3.5 py-2.5 rounded-xl border-2 text-xs font-semibold transition cursor-pointer ${cls}">
+                      ${ch.text}
+                    </button>
+                  `;
+                }).join('')}
+              </div>
+
+              ${s.msg ? `
+                <div class="anim-in rounded-xl p-3 border text-xs font-semibold space-y-1.5 ${s.solved ? 'bg-emerald-500/15 border-emerald-500/50 text-emerald-400' : 'bg-amber-500/15 border-amber-500/50 text-amber-400'}">
+                  <div>${s.msg}</div>
+                  ${s.solved ? `<div class="text-[var(--foreground)] font-normal">${p.explain}</div>` : ''}
+                  ${s.solved && idx < ch2Act3Puzzles.length - 1 ? `<button id="c2a3-next" class="mt-1 px-3 py-1.5 rounded-lg bg-emerald-500 text-white font-bold text-xs cursor-pointer">Next Lab →</button>` : ''}
+                </div>
+              ` : ''}
+            </div>
+
+            <div id="c2a3-svg" class="md:col-span-6">${vz.svg}</div>
+          </div>
+        `;
+
+        stage.querySelectorAll('[data-c2p3]').forEach((b) => {
+          b.addEventListener('click', () => {
+            state.idx2[3] = Number(b.dataset.c2p3);
+            initCh2Act3(state.idx2[3]);
+            renderCh2Act3();
+          });
+        });
+
+        const slider = document.getElementById('c2a3-slider');
+        const valEl = document.getElementById('c2a3-val');
+        const readEl = document.getElementById('c2a3-readout');
+        const svgEl = document.getElementById('c2a3-svg');
+        const syncViz = () => {
+          const out = p.renderViz(s.val);
+          valEl.textContent = s.val;
+          readEl.innerHTML = out.readout;
+          svgEl.innerHTML = out.svg;
+        };
+        slider.addEventListener('input', () => { s.val = Number(slider.value); syncViz(); });
+        document.getElementById('c2a3-snap').addEventListener('click', () => {
+          s.val = p.slider.target;
+          slider.value = s.val;
+          beep(440, 0.06);
+          syncViz();
+        });
+
+        stage.querySelectorAll('[data-c2c3]').forEach((b) => {
+          b.addEventListener('click', () => {
+            const ci = Number(b.dataset.c2c3);
+            s.picked = ci;
+            if (p.choices[ci].ok) {
+              s.solved = true;
+              s.msg = '🔮 Second-Order Mastery! (+35 XP)';
+              sfxWin();
+              addXP(35);
+              markCleared2(3, idx);
+            } else {
+              sfxWarn();
+              breakStreak();
+              s.msg = 'Drag the slider to ' + p.slider.target + ' and watch the graph respond!';
+            }
+            renderCh2Act3();
+          });
+        });
+
+        const nxt = document.getElementById('c2a3-next');
+        if (nxt) nxt.addEventListener('click', () => {
+          state.idx2[3] = idx + 1;
+          initCh2Act3(state.idx2[3]);
+          renderCh2Act3();
+        });
+      }
+
+      function render() {
+        updateHud();
+        if (state.ch === 1) {
+          if (state.act === 1) renderAct1();
+          else if (state.act === 2) renderAct2();
+          else renderAct3();
+        } else {
+          if (state.act === 1) renderCh2Act1();
+          else if (state.act === 2) renderCh2Act2();
+          else renderCh2Act3();
+        }
+      }
+
+      window.addEventListener('themechange', render);
+      render();
+    })();
+  </script>
+</body>
+</html>
